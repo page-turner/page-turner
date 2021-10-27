@@ -13,7 +13,7 @@
  * @param  theta1Max: (float) high range of servo1
  * @param  theta2Min: (float) low range of servo2
  * @param  theta2Max: (float) high range of servo2
- * @retval (bool) true if coordinates possible to reach and angles updated, false if angles not updates
+ * @retval (bool) true if coordinates possible to reach and angles updated, false if angles not updated
  */
 bool cartToAngles(float x, float y, float* theta1, float* theta2, float d1, float d2, float theta1Min, float theta1Max, float theta2Min, float theta2Max)
 {
