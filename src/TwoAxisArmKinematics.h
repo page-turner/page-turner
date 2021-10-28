@@ -7,7 +7,7 @@
  * @param  y: (float) y coordinate
  * @param  theta1: (float*) angle for first servo 
  * @param  theta2: (float*) angle for second servo
- * @param  d1: (float) length of first arm segment* 
+ * @param  d1: (float) length of first arm segment
  * @param  d2: (float) length of second arm segment
  * @param  theta1Min: (float) low range of servo1
  * @param  theta1Max: (float) high range of servo1
