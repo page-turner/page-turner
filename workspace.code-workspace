@@ -5,5 +5,10 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"*.json": "jsonc",
+			"initializer_list": "cpp"
+		}
+	}
 }
