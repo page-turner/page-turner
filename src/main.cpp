@@ -29,12 +29,15 @@ void setup()
 {
     Serial.begin(115200);
     servo1.setVelAccelLimits(150, 200);
-    servo2.setVelAccelLimits(150, 200);
-    servo1.setSetAngles(-90, 90);
-    servo2.setSetAngles(-90, 90);
-    servo1.setAngleLimits(-90, 90);
-    servo2.setAngleLimits(-90, 90);
+    servo1.setServoRangeValues(410, 1840);
+    servo1.setSetAngles(40, -90);
+    servo1.setAngleLimits(-90, 40);
     servo1.setAngleImmediate(0);
+
+    servo2.setVelAccelLimits(150, 200);
+    servo2.setServoRangeValues(544, 2200);
+    servo2.setSetAngles(-70, 100);
+    servo2.setAngleLimits(-70, 100);
     servo2.setAngleImmediate(0);
 
     EWD::routerName = "Brown-Guest"; //name of the wifi network you want to connect to
