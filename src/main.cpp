@@ -11,6 +11,13 @@ float x = 0;
 float y = 0;
 float theta1 = 0;
 float theta2 = 0;
+const float length_arm_1 = 14; // in cm
+const float length_arm_2 = 11; // in cm
+const float theta1Min = -90;
+const float theta1Max = 40;
+const float theta2Min = -70;
+const float theta2Max = 100;
+#define ARM_SETTINGS theta1Min, theta1Max, theta2Min, theta2Max
 
 void WifiDataToParse()
 {
@@ -21,8 +28,8 @@ void WifiDataToParse()
 }
 void WifiDataToSend()
 {
-    EWD::sendFl(servo1.getPos());
-    EWD::sendFl(servo2.getPos());
+    EWD::sendFl(theta1);
+    EWD::sendFl(theta2);
     //add data to send here:
 }
 void setup()
@@ -31,13 +38,13 @@ void setup()
     servo1.setVelAccelLimits(150, 200);
     servo1.setServoRangeValues(410, 1840);
     servo1.setSetAngles(40, -90);
-    servo1.setAngleLimits(-90, 40);
+    servo1.setAngleLimits(theta1Min, theta1Max);
     servo1.setAngleImmediate(0);
 
     servo2.setVelAccelLimits(150, 200);
     servo2.setServoRangeValues(544, 2200);
-    servo2.setSetAngles(-70, 100);
-    servo2.setAngleLimits(-70, 100);
+    servo2.setSetAngles(70,-100);
+    servo2.setAngleLimits(theta2Min, theta2Max);
     servo2.setAngleImmediate(0);
 
     EWD::routerName = "Brown-Guest"; //name of the wifi network you want to connect to
@@ -55,9 +62,7 @@ void loop()
     servo1.setEnable(enabled);
     servo2.setEnable(enabled);
 
-    //calculate stuff
-    theta1 = x;
-    theta2 = y;
+    cartToAngles(x, y, &theta1, &theta2, length_arm_1, length_arm_2, ARM_SETTINGS);
 
     servo1.setAngleSmoothed(theta1);
     servo2.setAngleSmoothed(theta2);
