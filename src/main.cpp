@@ -2,9 +2,9 @@
 #include "JMotor.h"
 #include "TwoAxisArmKinematics.h"
 #include <Arduino.h>
-JMotorDriverEsp32Servo servo1Driver = JMotorDriverEsp32Servo(1, 25);
+JMotorDriverEsp32Servo servo1Driver = JMotorDriverEsp32Servo(8, 25); //pwm channel, pin
 JServoControllerAdvanced servo1 = JServoControllerAdvanced(servo1Driver);
-JMotorDriverEsp32Servo servo2Driver = JMotorDriverEsp32Servo(2, 26);
+JMotorDriverEsp32Servo servo2Driver = JMotorDriverEsp32Servo(9, 26); //pwm channel, pin
 JServoControllerAdvanced servo2 = JServoControllerAdvanced(servo2Driver);
 bool enabled = false;
 float x = 0;
@@ -17,7 +17,7 @@ const float theta1Min = -90;
 const float theta1Max = 40;
 const float theta2Min = -70;
 const float theta2Max = 100;
-#define ARM_SETTINGS theta1Min, theta1Max, theta2Min, theta2Max
+#define ARM_SETTINGS length_arm_1, length_arm_2, theta1Min, theta1Max, theta2Min, theta2Max
 
 void WifiDataToParse()
 {
@@ -37,13 +37,13 @@ void setup()
     Serial.begin(115200);
     servo1.setVelAccelLimits(150, 200);
     servo1.setServoRangeValues(410, 1840);
-    servo1.setSetAngles(40, -90);
+    servo1.setSetAngles(theta1Max, theta1Min);
     servo1.setAngleLimits(theta1Min, theta1Max);
     servo1.setAngleImmediate(0);
 
     servo2.setVelAccelLimits(150, 200);
     servo2.setServoRangeValues(544, 2200);
-    servo2.setSetAngles(70,-100);
+    servo2.setSetAngles(theta2Min, theta2Max);
     servo2.setAngleLimits(theta2Min, theta2Max);
     servo2.setAngleImmediate(0);
 
@@ -62,10 +62,10 @@ void loop()
     servo1.setEnable(enabled);
     servo2.setEnable(enabled);
 
-    cartToAngles(x, y, &theta1, &theta2, length_arm_1, length_arm_2, ARM_SETTINGS);
-
-    servo1.setAngleSmoothed(theta1);
-    servo2.setAngleSmoothed(theta2);
+    if (cartToAngles(x, y, theta1, theta2, ARM_SETTINGS)) {
+        servo1.setAngleSmoothed(theta1);
+        servo2.setAngleSmoothed(theta2);
+    }
 
     servo1.run();
     servo2.run();
