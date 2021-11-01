@@ -5,8 +5,8 @@
  * @brief  reverse kinematics formula for a 2D arm
  * @param  x: (float) x coordinate
  * @param  y: (float) y coordinate
- * @param  theta1: (float*) angle for first servo 
- * @param  theta2: (float*) angle for second servo
+ * @param  theta1: (float&) angle for first servo 
+ * @param  theta2: (float&) angle for second servo
  * @param  d1: (float) length of first arm segment
  * @param  d2: (float) length of second arm segment
  * @param  theta1Min: (float) low range of servo1

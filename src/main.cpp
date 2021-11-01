@@ -1,3 +1,4 @@
+#include "Derivs_Limiter.h"
 #include "ESP32_easy_wifi_data.h"
 #include "JMotor.h"
 #include "TwoAxisArmKinematics.h"
@@ -7,6 +8,8 @@ JServoControllerAdvanced servo1 = JServoControllerAdvanced(servo1Driver);
 JMotorDriverEsp32Servo servo2Driver = JMotorDriverEsp32Servo(9, 26); //pwm channel, pin
 JServoControllerAdvanced servo2 = JServoControllerAdvanced(servo2Driver);
 bool enabled = false;
+float xTarg = 0;
+float yTarg = 0;
 float x = 0;
 float y = 0;
 float theta1 = 0;
@@ -15,35 +18,38 @@ const float length_arm_1 = 14; // in cm
 const float length_arm_2 = 11; // in cm
 const float theta1Min = -90;
 const float theta1Max = 40;
-const float theta2Min = -70;
-const float theta2Max = 100;
+const float theta2Min = -100;
+const float theta2Max = 70;
 #define ARM_SETTINGS length_arm_1, length_arm_2, theta1Min, theta1Max, theta2Min, theta2Max
+
+Derivs_Limiter xLimiter = Derivs_Limiter(3, 3);
+Derivs_Limiter yLimiter = Derivs_Limiter(3, 3);
 
 void WifiDataToParse()
 {
     enabled = EWD::recvBl();
-    x = EWD::recvFl();
-    y = EWD::recvFl();
+    xTarg = EWD::recvFl();
+    yTarg = EWD::recvFl();
     //add data to read here: (EWD::recvBl, EWD::recvBy, EWD::recvIn, EWD::recvFl)(boolean, byte, int, float)
 }
 void WifiDataToSend()
 {
-    EWD::sendFl(theta1);
-    EWD::sendFl(theta2);
+    EWD::sendFl(servo1.getPos());
+    EWD::sendFl(servo2.getPos());
     //add data to send here:
 }
 void setup()
 {
     Serial.begin(115200);
-    servo1.setVelAccelLimits(150, 200);
+    servo1.setVelAccelLimits(250, 400);
     servo1.setServoRangeValues(410, 1840);
     servo1.setSetAngles(theta1Max, theta1Min);
     servo1.setAngleLimits(theta1Min, theta1Max);
     servo1.setAngleImmediate(0);
 
-    servo2.setVelAccelLimits(150, 200);
+    servo2.setVelAccelLimits(250, 400);
     servo2.setServoRangeValues(544, 2200);
-    servo2.setSetAngles(theta2Min, theta2Max);
+    servo2.setSetAngles(theta2Max, theta2Min);
     servo2.setAngleLimits(theta2Min, theta2Max);
     servo2.setAngleImmediate(0);
 
@@ -62,6 +68,9 @@ void loop()
     servo1.setEnable(enabled);
     servo2.setEnable(enabled);
 
+    x = xLimiter.calc(xTarg);
+    y = yLimiter.calc(yTarg);
+
     if (cartToAngles(x, y, theta1, theta2, ARM_SETTINGS)) {
         servo1.setAngleSmoothed(theta1);
         servo2.setAngleSmoothed(theta2);
@@ -69,4 +78,5 @@ void loop()
 
     servo1.run();
     servo2.run();
+    delay(1);
 }
