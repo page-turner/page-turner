@@ -1,6 +1,6 @@
-#include "Derivs_Limiter.h" //v2.6.1 https://github.com/joshua-8/Derivs_Limiter
-#include "ESP32_easy_wifi_data.h" //v0.3.0 https://github.com/joshua-8/ESP32_easy_wifi_data
-#include "JMotor.h" //v0.7.0 https://github.com/joshua-8/JMotor
+#include "Derivs_Limiter.h"
+#include "ESP32_easy_wifi_data.h"
+#include "JMotor.h"
 #include "TwoAxisArmKinematics.h"
 #include <Arduino.h>
 JMotorDriverEsp32Servo servo1Driver = JMotorDriverEsp32Servo(8, 25); //pwm channel, pin
@@ -17,10 +17,10 @@ float theta1 = 0;
 float theta2 = 0;
 const float length_arm_1 = 14; // in cm
 const float length_arm_2 = 11; // in cm
-const float theta1Min = -90;
-const float theta1Max = 40;
-const float theta2Min = -100;
-const float theta2Max = 70;
+const float theta1Min = -135;
+const float theta1Max = 135;
+const float theta2Min = -135;
+const float theta2Max = 135;
 #define ARM_SETTINGS length_arm_1, length_arm_2, theta1Min, theta1Max, theta2Min, theta2Max
 
 unsigned long millis_since_last_state_update = 0;
@@ -49,20 +49,22 @@ void WifiDataToParse()
 void WifiDataToSend()
 {
     EWD::sendFl(servo1.getPos());
-    EWD::sendFl(servo2.getPos());
+    EWD::sendFl(servo1Driver.getSetMicroseconds());
 }
 void setup()
 {
     Serial.begin(115200);
+    servo1.setConstrainRange(false);
     servo1.setVelAccelLimits(250, 400);
-    servo1.setServoRangeValues(410, 1840);
-    servo1.setSetAngles(theta1Max, theta1Min);
-    servo1.setAngleLimits(theta1Min, theta1Max);
+    servo1.setServoRangeValues(870, 2151);
+    servo1.setSetAngles(-90, 90);
+    servo1.setAngleLimits(theta1Max, theta1Min);
     servo1.setAngleImmediate(0);
 
+    servo2.setConstrainRange(false);
     servo2.setVelAccelLimits(250, 400);
     servo2.setServoRangeValues(544, 2200);
-    servo2.setSetAngles(theta2Max, theta2Min);
+    servo2.setSetAngles(135, -135);
     servo2.setAngleLimits(theta2Min, theta2Max);
     servo2.setAngleImmediate(0);
 
@@ -108,15 +110,17 @@ void loop()
     servo1.setEnable(enabled);
     servo2.setEnable(enabled);
 
-    run_state();
+    servo1.setAngleSmoothed(xTarg);
 
-    x = xLimiter.calc();
-    y = yLimiter.calc();
+    // run_state();
 
-    if (cartToAngles(x, y, theta1, theta2, ARM_SETTINGS)) {
-        servo1.setAngleSmoothed(theta1);
-        servo2.setAngleSmoothed(theta2);
-    }
+    // x = xLimiter.calc();
+    // y = yLimiter.calc();
+
+    // if (cartToAngles(x, y, theta1, theta2, ARM_SETTINGS)) {
+    //     servo1.setAngleSmoothed(theta1);
+    //     servo2.setAngleSmoothed(theta2);
+    // }
 
     servo1.run();
     servo2.run();
