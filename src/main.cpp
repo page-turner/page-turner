@@ -110,6 +110,14 @@ void loop()
 
     run_state();
 
+    x = xLimiter.calc();
+    y = yLimiter.calc();
+
+    if (cartToAngles(x, y, theta1, theta2, ARM_SETTINGS)) {
+        servo1.setAngleSmoothed(theta1);
+        servo2.setAngleSmoothed(theta2);
+    }
+
     servo1.run();
     servo2.run();
     delay(1);
