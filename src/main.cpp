@@ -1,8 +1,14 @@
-#include "Derivs_Limiter.h"
-#include "ESP32_easy_wifi_data.h"
-#include "JMotor.h"
 #include "TwoAxisArmKinematics.h"
 #include <Arduino.h>
+#include <Derivs_Limiter.h>
+#include <ESP32_easy_wifi_data.h>
+#include <HX711.h>
+#include <JMotor.h>
+const byte torque1SensorDTPin = 19;
+const byte torque1SensorSCKPin = 18;
+const byte torque2SensorDTPin = 5;
+const byte torque2SensorSCKPin = 17;
+
 JMotorDriverEsp32Servo servo1Driver = JMotorDriverEsp32Servo(8, 25); //pwm channel, pin
 JServoControllerAdvanced servo1 = JServoControllerAdvanced(servo1Driver);
 JMotorDriverEsp32Servo servo2Driver = JMotorDriverEsp32Servo(9, 26); //pwm channel, pin
@@ -11,6 +17,8 @@ bool enabled = false;
 float xTarg = 0;
 float yTarg = 0;
 bool go = false;
+float torque1 = 0;
+float torque2 = 0;
 float x = 0;
 float y = 0;
 float theta1 = 0;
@@ -27,8 +35,11 @@ unsigned long millis_since_last_state_update = 0;
 unsigned long millis_when_state_changed = 0;
 bool did_state_change = true;
 
-Derivs_Limiter xLimiter = Derivs_Limiter(3, 3);
-Derivs_Limiter yLimiter = Derivs_Limiter(3, 3);
+Derivs_Limiter xLimiter = Derivs_Limiter(6, 3);
+Derivs_Limiter yLimiter = Derivs_Limiter(6, 3);
+
+HX711 torque1Sensor;
+HX711 torque2Sensor;
 
 typedef enum {
     START = 0,
@@ -49,7 +60,9 @@ void WifiDataToParse()
 void WifiDataToSend()
 {
     EWD::sendFl(servo1.getPos());
-    EWD::sendFl(servo1Driver.getSetMicroseconds());
+    EWD::sendFl(servo2.getPos());
+    EWD::sendFl(torque1);
+    EWD::sendFl(torque2);
 }
 void setup()
 {
@@ -63,10 +76,19 @@ void setup()
 
     servo2.setConstrainRange(false);
     servo2.setVelAccelLimits(250, 400);
-    servo2.setServoRangeValues(544, 2200);
-    servo2.setSetAngles(135, -135);
-    servo2.setAngleLimits(theta2Min, theta2Max);
+    servo2.setServoRangeValues(840, 2131);
+    servo2.setSetAngles(-90, 90);
+    servo2.setAngleLimits(theta2Max, theta2Min);
     servo2.setAngleImmediate(0);
+
+    //torque load cells
+    torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
+    torque1Sensor.set_scale(10000.0);
+    torque1Sensor.tare();
+
+    torque2Sensor.begin(torque2SensorDTPin, torque2SensorSCKPin); //hx711 DT, SCK
+    torque2Sensor.set_scale(10000.0);
+    torque2Sensor.tare();
 
     EWD::routerName = "Brown-Guest"; //name of the wifi network you want to connect to
     EWD::routerPass = "-open-network-"; //password for your wifi network (enter "-open-network-" if the network has no password) (default: -open-network-)
@@ -110,17 +132,23 @@ void loop()
     servo1.setEnable(enabled);
     servo2.setEnable(enabled);
 
-    servo1.setAngleSmoothed(xTarg);
+    if (torque1Sensor.is_ready()) {
+        torque1 = torque1Sensor.get_units();
+    }
 
-    // run_state();
+    if (torque2Sensor.is_ready()) {
+        torque2 = torque2Sensor.get_units();
+    }
 
-    // x = xLimiter.calc();
-    // y = yLimiter.calc();
+    run_state();
 
-    // if (cartToAngles(x, y, theta1, theta2, ARM_SETTINGS)) {
-    //     servo1.setAngleSmoothed(theta1);
-    //     servo2.setAngleSmoothed(theta2);
-    // }
+    x = xLimiter.calc();
+    y = yLimiter.calc();
+
+    if (cartToAngles(x, y, theta1, theta2, ARM_SETTINGS)) {
+        servo1.setAngleSmoothed(theta1);
+        servo2.setAngleSmoothed(theta2);
+    }
 
     servo1.run();
     servo2.run();

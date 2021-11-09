@@ -1,6 +1,6 @@
 #ifndef _TWO_AXIS_ARM_KINEMATICS_H_
 #define _TWO_AXIS_ARM_KINEMATICS_H_
-
+#include <Arduino.h>
 /**
  * @brief  reverse kinematics formula for a 2D arm
  * @param  x: (float) x coordinate
