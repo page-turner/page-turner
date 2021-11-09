@@ -4,6 +4,7 @@
 #include <ESP32_easy_wifi_data.h>
 #include <HX711.h>
 #include <JMotor.h>
+
 const byte torque1SensorDTPin = 19;
 const byte torque1SensorSCKPin = 18;
 const byte torque2SensorDTPin = 5;
@@ -13,18 +14,23 @@ JMotorDriverEsp32Servo servo1Driver = JMotorDriverEsp32Servo(8, 25); //pwm chann
 JServoControllerAdvanced servo1 = JServoControllerAdvanced(servo1Driver);
 JMotorDriverEsp32Servo servo2Driver = JMotorDriverEsp32Servo(9, 26); //pwm channel, pin
 JServoControllerAdvanced servo2 = JServoControllerAdvanced(servo2Driver);
-bool enabled = false;
-float xTarg = 0;
-float yTarg = 0;
-bool go = false;
+
+bool enabled = false; //received over wifi
+float xTarg = 0; //for debug, received over wifi
+float yTarg = 0; //for debug, received over wifi
+bool go = false; //for debug, received over wifi
+//global variables for force measurements
 float torque1 = 0;
 float torque2 = 0;
 float Fx = 0;
 float Fy = 0;
+//arm position
 float x = 0;
 float y = 0;
+//servo target angles
 float theta1 = 0;
 float theta2 = 0;
+//arm constants
 const float length_arm_1 = 14; // in cm
 const float length_arm_2 = 11; // in cm
 const float theta1Min = -135;
@@ -33,16 +39,20 @@ const float theta2Min = -135;
 const float theta2Max = 135;
 #define ARM_SETTINGS length_arm_1, length_arm_2, theta1Min, theta1Max, theta2Min, theta2Max
 
+//state machine variables
 unsigned long millis_since_last_state_update = 0;
 unsigned long millis_when_state_changed = 0;
 bool did_state_change = true;
 
+//smooth acceleration for arm position
 Derivs_Limiter xLimiter = Derivs_Limiter(6, 3);
 Derivs_Limiter yLimiter = Derivs_Limiter(6, 3);
 
+//for reading loadcells
 HX711 torque1Sensor;
 HX711 torque2Sensor;
 
+//list of states for state machine
 typedef enum {
     START = 0,
     IDLE = 1,
@@ -52,6 +62,7 @@ typedef enum {
 state PREVIOUS_STATE = START;
 state CURRENT_STATE = IDLE;
 
+//for debug, receive and send data over wifi
 void WifiDataToParse()
 {
     enabled = EWD::recvBl();
@@ -66,9 +77,12 @@ void WifiDataToSend()
     EWD::sendFl(torque1);
     EWD::sendFl(torque2);
 }
+
 void setup()
 {
     Serial.begin(115200);
+
+    //set up and calibrate servos
     servo1.setConstrainRange(false);
     servo1.setVelAccelLimits(250, 400);
     servo1.setServoRangeValues(870, 2151);
@@ -85,11 +99,11 @@ void setup()
 
     //torque load cells
     torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
-    torque1Sensor.set_scale(10000.0);
+    torque1Sensor.set_scale(10000.0); //calibrate sensor by changing this value
     torque1Sensor.tare();
 
     torque2Sensor.begin(torque2SensorDTPin, torque2SensorSCKPin); //hx711 DT, SCK
-    torque2Sensor.set_scale(10000.0);
+    torque2Sensor.set_scale(10000.0); //calibrate sensor by changing this value
     torque2Sensor.tare();
 
     EWD::routerName = "Brown-Guest"; //name of the wifi network you want to connect to
@@ -99,13 +113,18 @@ void setup()
 }
 
 #include "states.h"
+/**
+ * @brief  state machine framework, add state functions to states.h, and call them from here
+ */
 void run_state()
 {
     did_state_change = PREVIOUS_STATE != CURRENT_STATE;
     if (did_state_change) {
         millis_when_state_changed = millis();
+        millis_since_last_state_update = 0;
+    } else {
+        millis_since_last_state_update = millis() - millis_when_state_changed;
     }
-    millis_since_last_state_update = millis() - millis_when_state_changed;
     state NEXT_STATE = CURRENT_STATE;
     switch (CURRENT_STATE) {
     case IDLE:
@@ -137,7 +156,6 @@ void loop()
     if (torque1Sensor.is_ready()) {
         torque1 = torque1Sensor.get_units();
     }
-
     if (torque2Sensor.is_ready()) {
         torque2 = torque2Sensor.get_units();
     }
@@ -146,14 +164,16 @@ void loop()
 
     run_state();
 
+    //smooth acceleration of arm movement
     x = xLimiter.calc();
     y = yLimiter.calc();
-
+    //calculate arm kinematics (by having this separate outside the state machine, states can't directly set servo angles)
     if (cartToAngles(x, y, theta1, theta2, ARM_SETTINGS)) {
         servo1.setAngleSmoothed(theta1);
         servo2.setAngleSmoothed(theta2);
     }
 
+    //run servo controllers
     servo1.run();
     servo2.run();
     delay(1);
