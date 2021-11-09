@@ -19,6 +19,8 @@ float yTarg = 0;
 bool go = false;
 float torque1 = 0;
 float torque2 = 0;
+float Fx = 0;
+float Fy = 0;
 float x = 0;
 float y = 0;
 float theta1 = 0;
@@ -139,6 +141,8 @@ void loop()
     if (torque2Sensor.is_ready()) {
         torque2 = torque2Sensor.get_units();
     }
+
+    torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2);
 
     run_state();
 
