@@ -35,4 +35,24 @@ bool cartToAngles(float x, float y, float& theta1, float& theta2, float d1, floa
     return true;
 }
 
+/**
+ * @brief  
+ * @param  theta1: (float) angle of first servo
+ * @param  theta2: (float) angle of second servo
+ * @param  torque1: (float) torque of first servo
+ * @param  torque2: (float) torque of second servo
+ * @param  Fx: (float&) horizontal component of force (this variable is changed)
+ * @param  Fy: (float&) vertical component of force (this variable is changed)
+ * @param  d1: (float) length of first arm
+ * @param  d2: (float) length of second arm
+ * @retval None
+ */
+void torqueToForces(float theta1, float theta2, float torque1, float torque2, float& Fx, float& Fy, float d1, float d2)
+{
+    theta1 = radians(theta1);
+    theta2 = radians(theta2);
+    Fx = torque1 * cos(theta1 + PI) / d1 + torque2 * cos(theta2 + theta1) / d2;
+    Fy = torque1 * sin(theta1 + PI) / d1 + torque2 * sin(theta2 + theta1) / d2;
+}
+
 #endif
