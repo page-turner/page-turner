@@ -52,12 +52,27 @@ Derivs_Limiter yLimiter = Derivs_Limiter(6, 3);
 HX711 torque1Sensor;
 HX711 torque2Sensor;
 
+//direction to turn
+typedef enum {
+    LEFT = -1,
+    RIGHT = 1,
+} direction;
+direction DIRECTION = LEFT;
+
 //list of states for state machine
 typedef enum {
     START = 0,
     IDLE = 1,
     A = 2,
-    B = 3
+    B = 3,
+    TP_SETUP = 4,
+    TP_STEP_1_BEGIN = 5,
+    TP_STEP_2_DOWN = 6,
+    TP_STEP_3_PEEL = 7,
+    TP_STEP_4_UP = 8,
+    TP_STEP_5_SWING = 9,
+    TP_STEP_6_CLAMP = 10,
+    TP_STEP_7_CLEANUP = 11,
 } state;
 state PREVIOUS_STATE = START;
 state CURRENT_STATE = IDLE;
@@ -128,7 +143,6 @@ void run_state()
     state NEXT_STATE = CURRENT_STATE;
     switch (CURRENT_STATE) {
     case IDLE:
-        // code
         NEXT_STATE = state_idle();
         break;
     case A:
