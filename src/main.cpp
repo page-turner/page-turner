@@ -69,7 +69,7 @@ typedef enum {
     TP_STEP_1_BEGIN = 5,
     TP_STEP_2_DOWN = 6,
     TP_STEP_3_PEEL = 7,
-    TP_STEP_4_UP = 8,
+    TP_STEP_4_LIFT = 8,
     TP_STEP_5_SWING = 9,
     TP_STEP_6_CLAMP = 10,
     TP_STEP_7_CLEANUP = 11,
