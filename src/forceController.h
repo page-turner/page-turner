@@ -16,7 +16,7 @@ double error, lastError, cumulativeError, rateError;
  * @returns output force, how much the force needs to be changed by
  */
 double pidConstantForceController(double currentForce) {
-    forceControllerUpdate();
+    return forceControllerUpdate(currentForce);
 }
 
 void forceControllerSetup(double _p, double _i, double _d, double _target) {
@@ -26,24 +26,23 @@ void forceControllerSetup(double _p, double _i, double _d, double _target) {
     target = _target;
 }
 
-void forceControllerUpdate() {
-    input = analogRead(A0); 
-    output = computePID(input);
-
-    computePID(input);
+double forceControllerUpdate(double _input) {
+    input = _input; 
+    output = computePID(_input);
+    return output;
 }
 
 
 double computePID(double _input){     
-    currentTime = millis();                                     //get current time
-    elapsedTime = (double)(currentTime - previousTime);         //compute time elapsed from previous computation
+    currentTime = millis();                                     // get current time
+    elapsedTime = (double)(currentTime - previousTime);         // compute time elapsed from previous computation
     error = target - _input;                                    // determine error
     cumulativeError += error * elapsedTime;                     // compute integral
     rateError = (error - lastError)/elapsedTime;                // compute derivative
-    double _output = p*error + i*cumulativeError + d*rateError; //PID output               
-    lastError = error;                                          //remember current error
-    previousTime = currentTime;                                 //remember current time
-    return _output;                                             //have function return the PID output
+    double _output = p*error + i*cumulativeError + d*rateError; // PID output               
+    lastError = error;                                          // remember current error
+    previousTime = currentTime;                                 // remember current time
+    return _output;                                             // have function return the PID output
 }
 
 #endif
