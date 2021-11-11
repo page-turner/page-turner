@@ -31,7 +31,7 @@ float y = 0;
 float theta1 = 0;
 float theta2 = 0;
 //arm constants
-const float length_arm_1 = 14; // in cm
+const float length_arm_1 = 22.5; // in cm
 const float length_arm_2 = 11; // in cm
 const float theta1Min = -135;
 const float theta1Max = 135;
@@ -76,6 +76,8 @@ void WifiDataToSend()
     EWD::sendFl(servo2.getPos());
     EWD::sendFl(torque1);
     EWD::sendFl(torque2);
+    EWD::sendFl(Fx);
+    EWD::sendFl(Fy);
 }
 
 void setup()
@@ -85,25 +87,25 @@ void setup()
     //set up and calibrate servos
     servo1.setConstrainRange(false);
     servo1.setVelAccelLimits(250, 400);
-    servo1.setServoRangeValues(870, 2151);
+    servo1.setServoRangeValues(840, 2131);
     servo1.setSetAngles(-90, 90);
     servo1.setAngleLimits(theta1Max, theta1Min);
     servo1.setAngleImmediate(0);
 
     servo2.setConstrainRange(false);
     servo2.setVelAccelLimits(250, 400);
-    servo2.setServoRangeValues(840, 2131);
+    servo2.setServoRangeValues(870, 2151);
     servo2.setSetAngles(-90, 90);
     servo2.setAngleLimits(theta2Max, theta2Min);
     servo2.setAngleImmediate(0);
 
     //torque load cells
     torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
-    torque1Sensor.set_scale(10000.0); //calibrate sensor by changing this value
+    torque1Sensor.set_scale(18200); //calibrate sensor by changing this value
     torque1Sensor.tare();
 
     torque2Sensor.begin(torque2SensorDTPin, torque2SensorSCKPin); //hx711 DT, SCK
-    torque2Sensor.set_scale(10000.0); //calibrate sensor by changing this value
+    torque2Sensor.set_scale(44000); //calibrate sensor by changing this value
     torque2Sensor.tare();
 
     EWD::routerName = "Brown-Guest"; //name of the wifi network you want to connect to
@@ -157,7 +159,7 @@ void loop()
         torque1 = torque1Sensor.get_units();
     }
     if (torque2Sensor.is_ready()) {
-        torque2 = torque2Sensor.get_units();
+        torque2 = -torque2Sensor.get_units(); //note negative sign because loadcell was installed backwards
     }
 
     torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2);

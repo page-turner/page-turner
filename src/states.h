@@ -12,7 +12,9 @@
 state state_idle()
 {
     if (go && enabled) { //for debug, wait for 'g' keypress from computer
-        return A;
+        torque1Sensor.tare();
+        torque2Sensor.tare();
+        //return A;
     }
     xLimiter.setTarget(xTarg); //for debug, manual control from wifi
     yLimiter.setTarget(yTarg);
