@@ -6,43 +6,16 @@
  */
 #include <Arduino.h>
 
-/**
- * @brief  wait for signal to turn page
- */
+ /**
+  * @brief  wait for signal to turn page
+  */
 state state_idle()
 {
     if (go && enabled) { //for debug, wait for 'g' keypress from computer
-        return A;
+        return TP_SETUP;
     }
     xLimiter.setTarget(xTarg); //for debug, manual control from wifi
     yLimiter.setTarget(yTarg);
-
-    return CURRENT_STATE;
-}
-
-state state_A()
-{
-    if (did_state_change) {
-        xLimiter.setTarget(10);
-        yLimiter.setTarget(5);
-    }
-
-    if (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget()) {
-        return B;
-    }
-
-    return CURRENT_STATE;
-}
-state state_B()
-{
-    if (did_state_change) {
-        xLimiter.setTarget(5);
-        yLimiter.setTarget(10);
-    }
-
-    if (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget()) {
-        return IDLE;
-    }
 
     return CURRENT_STATE;
 }
@@ -52,53 +25,55 @@ state state_tp_setup()
 {
     if (did_state_change) {
         // reset variables (if any)
-        // 0 out load cell calibration
         // DETERMINE WHICH DIRECTION TO GO IN
-        DIRECTION = LEFT;
+        DIRECTION = FORWARD;
     }
     return TP_STEP_1_BEGIN;
 }
 
 state state_tp_step_1_begin() {
+    //go and hover above edge of book
     if (did_state_change) {
-        // xLimiter.setTarget(5);
-        // yLimiter.setTarget(10);
+        xLimiter.setTarget(hoverX * DIRECTION);
+        yLimiter.setTarget(hoverY);
     }
     if (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget()) {
         return TP_STEP_2_DOWN;
     }
-    return CURRENT_STATE; 
+    return CURRENT_STATE;
 }
 
 state state_tp_step_2_down() {
     if (did_state_change) {
-        // set force needed and tell servos to go down slowly
+        torque1Sensor.tare();
+        torque2Sensor.tare();
+        // tell servos to go down slowly
     }
-    if (0 /* calculated force is sufficient */) {
+    if (Fy > targetForceY) {
         return TP_STEP_3_PEEL;
     }
-    return CURRENT_STATE; 
+    yLimiter.jogPosition(-downSpeed * yLimiter.getTimeInterval());
+    return CURRENT_STATE;
 }
 
 state state_tp_step_3_peel() {
     if (did_state_change) {
-        // xLimiter.setTarget(5);
-        // yLimiter.setTarget(10);
+        xLimiter.setTargetTimedMovePreferred(xLimiter.getPosition() - peelDist * DIRECTION, peelTime);
     }
-    if (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget()) {
+    if (xLimiter.isPosAtTarget()) {
+        xLimiter.resetVelLimitToOriginal();
         return TP_STEP_4_LIFT;
     }
-    // make sure xy of servos changes with respect to force being applied (keep force constant)
-    return CURRENT_STATE; 
+    // [TODO] make sure y position changes with respect to force being applied (keep force constant)
+    return CURRENT_STATE;
 }
 
-state state_tp_step_4_left() {
+state state_tp_step_4_lift() {
     if (did_state_change) {
-        // xLimiter.setTarget(5);
-        // yLimiter.setTarget(10);
+        yLimiter.setTarget(yLimiter.getPosition() + liftHeight);
     }
     if (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget()) {
         return IDLE; // change later to TP_STEP_5_SWING
     }
-    return CURRENT_STATE; 
+    return CURRENT_STATE;
 }

@@ -1,4 +1,5 @@
 #include "TwoAxisArmKinematics.h"
+#include "forceController.h"
 #include <Arduino.h>
 #include <Derivs_Limiter.h>
 #include <ESP32_easy_wifi_data.h>
@@ -52,27 +53,35 @@ Derivs_Limiter yLimiter = Derivs_Limiter(6, 3);
 HX711 torque1Sensor;
 HX711 torque2Sensor;
 
-//direction to turn
+//settings relevant to the book being used
+float lengthOfBook = 0;
+float hoverX = 14; // coordinate to move the servo arm (x direction) when beginning turn page routine
+float hoverY = 6;; // coordinate to move the servo arm (y direction) when beginning turn page routine
+float targetForceY = .5; // how much force (y direction) is being applied on the book
+float peelDist = 2; //how far to move tape wheel along book
+float peelTime = 3; //how long peel motion should take
+float liftHeight = 6; //how far to lift up after peeling up a single page
+float downSpeed = 1; // what speed to move arm towards page at
+
+//direction to turn the page (BACKWARD makes page move right, FORWARD makes the page move left)
 typedef enum {
-    LEFT = -1,
-    RIGHT = 1,
+    BACKWARD = -1,
+    FORWARD = 1,
 } direction;
-direction DIRECTION = LEFT;
+direction DIRECTION = FORWARD;
 
 //list of states for state machine
 typedef enum {
     START = 0,
     IDLE = 1,
-    A = 2,
-    B = 3,
-    TP_SETUP = 4,
-    TP_STEP_1_BEGIN = 5,
-    TP_STEP_2_DOWN = 6,
-    TP_STEP_3_PEEL = 7,
-    TP_STEP_4_LIFT = 8,
-    TP_STEP_5_SWING = 9,
-    TP_STEP_6_CLAMP = 10,
-    TP_STEP_7_CLEANUP = 11,
+    TP_SETUP = 2,
+    TP_STEP_1_BEGIN = 3,
+    TP_STEP_2_DOWN = 4,
+    TP_STEP_3_PEEL = 5,
+    TP_STEP_4_LIFT = 6,
+    TP_STEP_5_SWING = 7,
+    TP_STEP_6_CLAMP = 8,
+    TP_STEP_7_CLEANUP = 9,
 } state;
 state PREVIOUS_STATE = START;
 state CURRENT_STATE = IDLE;
@@ -137,7 +146,8 @@ void run_state()
     if (did_state_change) {
         millis_when_state_changed = millis();
         millis_since_last_state_update = 0;
-    } else {
+    }
+    else {
         millis_since_last_state_update = millis() - millis_when_state_changed;
     }
     state NEXT_STATE = CURRENT_STATE;
@@ -145,11 +155,20 @@ void run_state()
     case IDLE:
         NEXT_STATE = state_idle();
         break;
-    case A:
-        NEXT_STATE = state_A();
+    case TP_SETUP:
+        NEXT_STATE = state_tp_setup();
         break;
-    case B:
-        NEXT_STATE = state_B();
+    case TP_STEP_1_BEGIN:
+        NEXT_STATE = state_tp_step_1_begin();
+        break;
+    case TP_STEP_2_DOWN:
+        NEXT_STATE = state_tp_step_2_down();
+        break;
+    case TP_STEP_3_PEEL:
+        NEXT_STATE = state_tp_step_3_peel();
+        break;
+    case TP_STEP_4_LIFT:
+        NEXT_STATE = state_tp_step_4_lift();
         break;
     default:
         break;

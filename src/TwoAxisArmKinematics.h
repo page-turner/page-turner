@@ -36,7 +36,7 @@ bool cartToAngles(float x, float y, float& theta1, float& theta2, float d1, floa
 }
 
 /**
- * @brief  
+ * @brief  convert torque of the two load cells into force being applied by the arm
  * @param  theta1: (float) angle of first servo
  * @param  theta2: (float) angle of second servo
  * @param  torque1: (float) torque of first servo
