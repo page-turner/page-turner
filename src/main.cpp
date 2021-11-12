@@ -53,6 +53,9 @@ Derivs_Limiter yLimiter = Derivs_Limiter(6, 3);
 HX711 torque1Sensor;
 HX711 torque2Sensor;
 
+//force controller using pid to maintain constant force when peeling a page
+forceController fc = forceController();
+
 //settings relevant to the book being used
 float lengthOfBook = 0;
 float hoverX = 14; // coordinate to move the servo arm (x direction) when beginning turn page routine

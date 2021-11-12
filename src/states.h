@@ -58,13 +58,17 @@ state state_tp_step_2_down() {
 
 state state_tp_step_3_peel() {
     if (did_state_change) {
+        fc.forceControllerSetup(0, 0, 0, 0);
         xLimiter.setTargetTimedMovePreferred(xLimiter.getPosition() - peelDist * DIRECTION, peelTime);
     }
     if (xLimiter.isPosAtTarget()) {
+        fc.forceControllerReset();
         xLimiter.resetVelLimitToOriginal();
         return TP_STEP_4_LIFT;
     }
     // [TODO] make sure y position changes with respect to force being applied (keep force constant)
+    double changeInY = fc.forceControllerUpdate(Fx);
+    yLimiter.setTarget(yLimiter.getPosition() + changeInY);
     return CURRENT_STATE;
 }
 
