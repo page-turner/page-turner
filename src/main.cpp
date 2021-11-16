@@ -58,12 +58,12 @@ forceController fc = forceController();
 
 //settings relevant to the book being used
 float lengthOfBook = 0;
-float hoverX = 14; // coordinate to move the servo arm (x direction) when beginning turn page routine
-float hoverY = 6;; // coordinate to move the servo arm (y direction) when beginning turn page routine
-float targetForceY = .5; // how much force (y direction) is being applied on the book
-float peelDist = 2; //how far to move tape wheel along book
+float hoverX = 16; // coordinate to move the servo arm (x direction) when beginning turn page routine
+float hoverY = 6; // coordinate to move the servo arm (y direction) when beginning turn page routine
+float targetForceY = -.05; // how much force (y direction) is being applied on the book
+float peelDist = 3; //how far to move tape wheel along book
 float peelTime = 3; //how long peel motion should take
-float liftHeight = 6; //how far to lift up after peeling up a single page
+float liftHeight = 3; //how far to lift up after peeling up a single page
 float downSpeed = 1; // what speed to move arm towards page at
 
 //direction to turn the page (BACKWARD makes page move right, FORWARD makes the page move left)
@@ -151,8 +151,7 @@ void run_state()
     if (did_state_change) {
         millis_when_state_changed = millis();
         millis_since_last_state_update = 0;
-    }
-    else {
+    } else {
         millis_since_last_state_update = millis() - millis_when_state_changed;
     }
     state NEXT_STATE = CURRENT_STATE;

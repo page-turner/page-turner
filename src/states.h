@@ -6,7 +6,12 @@
  */
 #include <Arduino.h>
 
- /**
+bool armAtTarget()
+{
+    return (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget() && servo1.isPosAtTarget() && servo2.isPosAtTarget());
+}
+
+/**
   * @brief  wait for signal to turn page
   */
 state state_idle()
@@ -31,32 +36,39 @@ state state_tp_setup()
     return TP_STEP_1_BEGIN;
 }
 
-state state_tp_step_1_begin() {
+state state_tp_step_1_begin()
+{
     //go and hover above edge of book
     if (did_state_change) {
         xLimiter.setTarget(hoverX * DIRECTION);
         yLimiter.setTarget(hoverY);
     }
-    if (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget()) {
+    if (armAtTarget()) {
         return TP_STEP_2_DOWN;
     }
     return CURRENT_STATE;
 }
 
-state state_tp_step_2_down() {
+state state_tp_step_2_down()
+{
     if (did_state_change) {
-        torque1Sensor.tare();
-        torque2Sensor.tare();
+        torque1Sensor.tare(3);
+        torque2Sensor.tare(3);
+        Fx = 0;
+        Fy = 0;
+        xLimiter.resetTime();
+        yLimiter.resetTime();
         // tell servos to go down slowly
     }
-    if (Fy > targetForceY) {
+    if (Fy < targetForceY) {
         return TP_STEP_3_PEEL;
     }
     yLimiter.jogPosition(-downSpeed * yLimiter.getTimeInterval());
     return CURRENT_STATE;
 }
 
-state state_tp_step_3_peel() {
+state state_tp_step_3_peel()
+{
     if (did_state_change) {
         fc.forceControllerSetup(0, 0, 0, 0);
         xLimiter.setTargetTimedMovePreferred(xLimiter.getPosition() - peelDist * DIRECTION, peelTime);
@@ -72,7 +84,8 @@ state state_tp_step_3_peel() {
     return CURRENT_STATE;
 }
 
-state state_tp_step_4_lift() {
+state state_tp_step_4_lift()
+{
     if (did_state_change) {
         yLimiter.setTarget(yLimiter.getPosition() + liftHeight);
     }
