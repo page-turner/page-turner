@@ -18,7 +18,8 @@ public:
      * @param target
      * @returns None
      */
-    void forceControllerSetup(double _p, double _i, double _d, double _target) {
+    void forceControllerSetup(double _p, double _i, double _d, double _target)
+    {
         p = _p;
         i = _i;
         d = _d;
@@ -30,8 +31,9 @@ public:
      * @param
      * @returns output force, how much the force needs to be changed by
      */
-    double forceControllerUpdate(double currentForce) {
-        input = currentForce; 
+    double forceControllerUpdate(double currentForce)
+    {
+        input = currentForce;
         output = computePID();
         return output;
     }
@@ -40,10 +42,15 @@ public:
      * @brief
      * @returns None
      */
-    void forceControllerReset() {
-        currentTime, previousTime = 0;
+    void forceControllerReset()
+    {
+        currentTime = 0;
+        previousTime = 0;
         elapsedTime = 0;
-        p, i, d, target = 0;
+        p = 0;
+        i = 0;
+        d = 0;
+        target = 0;
     }
 
 protected:
@@ -52,16 +59,17 @@ protected:
      * @param
      * @returns output force, how much the force needs to be changed by
      */
-    virtual double computePID(){     
-        currentTime = millis();                                     // get current time
-        elapsedTime = (double)(currentTime - previousTime);         // compute time elapsed from previous computation
-        error = target - input;                                     // determine error
-        cumulativeError += error * elapsedTime;                     // compute integral
-        rateError = (error - lastError)/elapsedTime;                // compute derivative
-        double _output = p*error + i*cumulativeError + d*rateError; // PID output               
-        lastError = error;                                          // remember current error
-        previousTime = currentTime;                                 // remember current time
-        return _output;                                             // have function return the PID output
+    virtual double computePID()
+    {
+        currentTime = millis(); // get current time
+        elapsedTime = (double)(currentTime - previousTime); // compute time elapsed from previous computation
+        error = target - input; // determine error
+        cumulativeError += error * elapsedTime; // compute integral
+        rateError = (error - lastError) / elapsedTime; // compute derivative
+        double _output = p * error + i * cumulativeError + d * rateError; // PID output
+        lastError = error; // remember current error
+        previousTime = currentTime; // remember current time
+        return _output; // have function return the PID output
     }
 };
 
