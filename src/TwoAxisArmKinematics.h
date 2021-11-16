@@ -36,7 +36,7 @@ bool cartToAngles(float x, float y, float& theta1, float& theta2, float d1, floa
 }
 
 /**
- * @brief  
+ * @brief  convert torque of the two load cells into force being applied by the arm
  * @param  theta1: (float) angle of first servo
  * @param  theta2: (float) angle of second servo
  * @param  torque1: (float) torque of first servo
@@ -47,12 +47,17 @@ bool cartToAngles(float x, float y, float& theta1, float& theta2, float d1, floa
  * @param  d2: (float) length of second arm
  * @retval None
  */
-void torqueToForces(float theta1, float theta2, float torque1, float torque2, float& Fx, float& Fy, float d1, float d2)
+void torqueToForces(float theta1, float theta2, float torque1, float torque2, float& Fx, float& Fy, float d1, float d2, float x, float y)
 {
     theta1 = radians(theta1);
     theta2 = radians(theta2);
-    Fx = torque1 * cos(theta1 + PI) / d1 + torque2 * cos(theta2 + theta1) / d2;
-    Fy = torque1 * sin(theta1 + PI) / d1 + torque2 * sin(theta2 + theta1) / d2;
+    //(px,py) is location of second joint
+    float px = -sin(theta1) * d1;
+    float py = cos(theta1) * d1;
+    float r_squared = sq(x) + sq(y);
+    //Thanks Eli for help with this formula!
+    Fx = torque2 * (py - y) / sq(d2) + torque1 * -y / r_squared;
+    Fy = torque2 * (x - px) / sq(d2) + torque1 * x / r_squared;
 }
 
 #endif

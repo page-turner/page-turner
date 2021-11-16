@@ -1,4 +1,5 @@
 #include "TwoAxisArmKinematics.h"
+#include "forceController.h"
 #include <Arduino.h>
 #include <Derivs_Limiter.h>
 #include <ESP32_easy_wifi_data.h>
@@ -31,7 +32,7 @@ float y = 0;
 float theta1 = 0;
 float theta2 = 0;
 //arm constants
-const float length_arm_1 = 14; // in cm
+const float length_arm_1 = 22.5; // in cm
 const float length_arm_2 = 11; // in cm
 const float theta1Min = -135;
 const float theta1Max = 135;
@@ -52,12 +53,38 @@ Derivs_Limiter yLimiter = Derivs_Limiter(6, 3);
 HX711 torque1Sensor;
 HX711 torque2Sensor;
 
+//force controller using pid to maintain constant force when peeling a page
+forceController fc = forceController();
+
+//SETTINGS relevant to the book being used
+float lengthOfBook = 0;
+float hoverX = 17; // coordinate to move the servo arm (x direction) when beginning turn page routine
+float hoverY = 6; // coordinate to move the servo arm (y direction) when beginning turn page routine
+float targetForceY = -.05; // how much force (y direction) is being applied on the book
+float peelDist = 3; //how far to move tape wheel along book
+float peelTime = 3; //how long peel motion should take
+float liftHeight = 9; //how far to lift up after peeling up a single page
+float downSpeed = 1; // what speed to move arm towards page at
+
+//direction to turn the page (BACKWARD makes page move right, FORWARD makes the page move left)
+typedef enum {
+    BACKWARD = -1,
+    FORWARD = 1,
+} direction;
+direction DIRECTION = FORWARD;
+
 //list of states for state machine
 typedef enum {
     START = 0,
     IDLE = 1,
-    A = 2,
-    B = 3
+    TP_SETUP = 2,
+    TP_STEP_1_BEGIN = 3,
+    TP_STEP_2_DOWN = 4,
+    TP_STEP_3_PEEL = 5,
+    TP_STEP_4_LIFT = 6,
+    TP_STEP_5_SWING = 7,
+    TP_STEP_6_CLAMP = 8,
+    TP_STEP_7_CLEANUP = 9,
 } state;
 state PREVIOUS_STATE = START;
 state CURRENT_STATE = IDLE;
@@ -76,6 +103,8 @@ void WifiDataToSend()
     EWD::sendFl(servo2.getPos());
     EWD::sendFl(torque1);
     EWD::sendFl(torque2);
+    EWD::sendFl(Fx);
+    EWD::sendFl(Fy);
 }
 
 void setup()
@@ -85,25 +114,25 @@ void setup()
     //set up and calibrate servos
     servo1.setConstrainRange(false);
     servo1.setVelAccelLimits(250, 400);
-    servo1.setServoRangeValues(870, 2151);
+    servo1.setServoRangeValues(840, 2131);
     servo1.setSetAngles(-90, 90);
     servo1.setAngleLimits(theta1Max, theta1Min);
     servo1.setAngleImmediate(0);
 
     servo2.setConstrainRange(false);
     servo2.setVelAccelLimits(250, 400);
-    servo2.setServoRangeValues(840, 2131);
+    servo2.setServoRangeValues(870, 2151);
     servo2.setSetAngles(-90, 90);
     servo2.setAngleLimits(theta2Max, theta2Min);
     servo2.setAngleImmediate(0);
 
     //torque load cells
     torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
-    torque1Sensor.set_scale(10000.0); //calibrate sensor by changing this value
+    torque1Sensor.set_scale(18200); //calibrate sensor by changing this value
     torque1Sensor.tare();
 
     torque2Sensor.begin(torque2SensorDTPin, torque2SensorSCKPin); //hx711 DT, SCK
-    torque2Sensor.set_scale(10000.0); //calibrate sensor by changing this value
+    torque2Sensor.set_scale(44000); //calibrate sensor by changing this value
     torque2Sensor.tare();
 
     EWD::routerName = "Brown-Guest"; //name of the wifi network you want to connect to
@@ -128,14 +157,22 @@ void run_state()
     state NEXT_STATE = CURRENT_STATE;
     switch (CURRENT_STATE) {
     case IDLE:
-        // code
         NEXT_STATE = state_idle();
         break;
-    case A:
-        NEXT_STATE = state_A();
+    case TP_SETUP:
+        NEXT_STATE = state_tp_setup();
         break;
-    case B:
-        NEXT_STATE = state_B();
+    case TP_STEP_1_BEGIN:
+        NEXT_STATE = state_tp_step_1_begin();
+        break;
+    case TP_STEP_2_DOWN:
+        NEXT_STATE = state_tp_step_2_down();
+        break;
+    case TP_STEP_3_PEEL:
+        NEXT_STATE = state_tp_step_3_peel();
+        break;
+    case TP_STEP_4_LIFT:
+        NEXT_STATE = state_tp_step_4_lift();
         break;
     default:
         break;
@@ -157,10 +194,10 @@ void loop()
         torque1 = torque1Sensor.get_units();
     }
     if (torque2Sensor.is_ready()) {
-        torque2 = torque2Sensor.get_units();
+        torque2 = -torque2Sensor.get_units(); //note negative sign because loadcell was installed backwards
     }
 
-    torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2);
+    torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
 
     run_state();
 
