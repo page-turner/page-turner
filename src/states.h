@@ -41,6 +41,9 @@ state state_tp_step_1_begin()
     //go and hover above edge of book
     if (did_state_change) {
         xLimiter.setTarget(hoverX * DIRECTION);
+    }
+    //TODO: FOLLOW ARC INSTEAD??
+    if (xLimiter.isPosAtTarget()) {
         yLimiter.setTarget(hoverY);
     }
     if (armAtTarget()) {

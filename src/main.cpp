@@ -56,14 +56,14 @@ HX711 torque2Sensor;
 //force controller using pid to maintain constant force when peeling a page
 forceController fc = forceController();
 
-//settings relevant to the book being used
+//SETTINGS relevant to the book being used
 float lengthOfBook = 0;
-float hoverX = 16; // coordinate to move the servo arm (x direction) when beginning turn page routine
+float hoverX = 17; // coordinate to move the servo arm (x direction) when beginning turn page routine
 float hoverY = 6; // coordinate to move the servo arm (y direction) when beginning turn page routine
 float targetForceY = -.05; // how much force (y direction) is being applied on the book
 float peelDist = 3; //how far to move tape wheel along book
 float peelTime = 3; //how long peel motion should take
-float liftHeight = 3; //how far to lift up after peeling up a single page
+float liftHeight = 9; //how far to lift up after peeling up a single page
 float downSpeed = 1; // what speed to move arm towards page at
 
 //direction to turn the page (BACKWARD makes page move right, FORWARD makes the page move left)
@@ -197,7 +197,7 @@ void loop()
         torque2 = -torque2Sensor.get_units(); //note negative sign because loadcell was installed backwards
     }
 
-    torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2);
+    torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
 
     run_state();
 
