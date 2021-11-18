@@ -45,6 +45,8 @@ bool cartToAngles(float x, float y, float& theta1, float& theta2, float d1, floa
  * @param  Fy: (float&) vertical component of force (this variable is changed)
  * @param  d1: (float) length of first arm
  * @param  d2: (float) length of second arm
+ * @param  x: (float) x coordinate used to calculate thetas
+ * @param  y: (float) y coordinate used to calculate thetas
  * @retval None
  */
 void torqueToForces(float theta1, float theta2, float torque1, float torque2, float& Fx, float& Fy, float d1, float d2, float x, float y)

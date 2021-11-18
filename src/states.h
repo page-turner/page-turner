@@ -32,6 +32,7 @@ state state_tp_setup()
         // reset variables (if any)
         // DETERMINE WHICH DIRECTION TO GO IN
         DIRECTION = FORWARD;
+        servoSweeper.setAngleSmoothed(-90);
     }
     return TP_STEP_1_BEGIN;
 }
@@ -81,7 +82,7 @@ state state_tp_step_3_peel()
         xLimiter.resetVelLimitToOriginal();
         return TP_STEP_4_LIFT;
     }
-    // [TODO] make sure y position changes with respect to force being applied (keep force constant)
+    // [TODO] make sure y position changes with respect to force being applied (keep force constant) follow angle of book
     double changeInY = fc.forceControllerUpdate(Fx);
     yLimiter.setTarget(yLimiter.getPosition() + changeInY);
     return CURRENT_STATE;
@@ -91,9 +92,33 @@ state state_tp_step_4_lift()
 {
     if (did_state_change) {
         yLimiter.setTarget(yLimiter.getPosition() + liftHeight);
+        xLimiter.setTarget(xLimiter.getPosition() - liftX * DIRECTION);
     }
+    // [TODO] try different paths for movement
     if (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget()) {
-        return IDLE; // change later to TP_STEP_5_SWING
+        return TP_STEP_5a_SWEEP;
+    }
+    return CURRENT_STATE;
+}
+
+state state_tp_step_5a_sweep()
+{
+    if (did_state_change) {
+        servoSweeper.setAngleSmoothed(85);
+    }
+    if (servoSweeper.isPosAtTarget()) {
+        return TP_STEP_5b_SWEEP;
+    }
+    return CURRENT_STATE;
+}
+
+state state_tp_step_5b_sweep()
+{
+    if (did_state_change) {
+        servoSweeper.setAngleSmoothed(-90);
+    }
+    if (servoSweeper.isPosAtTarget()) {
+        return IDLE; // change later to TP_STEP_6_CLAMP
     }
     return CURRENT_STATE;
 }

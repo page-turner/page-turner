@@ -1,3 +1,6 @@
+#define EWDmaxWifiSendBufSize 100
+#define EWDmaxWifiRecvBufSize 100
+
 #include "TwoAxisArmKinematics.h"
 #include "forceController.h"
 #include <Arduino.h>
@@ -15,6 +18,9 @@ JMotorDriverEsp32Servo servo1Driver = JMotorDriverEsp32Servo(8, 25); //pwm chann
 JServoControllerAdvanced servo1 = JServoControllerAdvanced(servo1Driver);
 JMotorDriverEsp32Servo servo2Driver = JMotorDriverEsp32Servo(9, 26); //pwm channel, pin
 JServoControllerAdvanced servo2 = JServoControllerAdvanced(servo2Driver);
+
+JMotorDriverEsp32Servo servoSweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
+JServoControllerAdvanced servoSweeper = JServoControllerAdvanced(servoSweeperDriver);
 
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
@@ -57,13 +63,13 @@ HX711 torque2Sensor;
 forceController fc = forceController();
 
 //SETTINGS relevant to the book being used
-float lengthOfBook = 0;
-float hoverX = 17; // coordinate to move the servo arm (x direction) when beginning turn page routine
-float hoverY = 6; // coordinate to move the servo arm (y direction) when beginning turn page routine
-float targetForceY = -.05; // how much force (y direction) is being applied on the book
-float peelDist = 3; //how far to move tape wheel along book
-float peelTime = 3; //how long peel motion should take
-float liftHeight = 9; //how far to lift up after peeling up a single page
+float hoverX = 12; // coordinate to move the servo arm (x direction) when beginning turn page routine
+float hoverY = 7; // coordinate to move the servo arm (y direction) when beginning turn page routine
+float targetForceY = -.08; // how much force (y direction) is being applied on the book
+float peelDist = .5; //how far to move tape wheel along book
+float peelTime = 2; //how long peel motion should take
+float liftHeight = 7; //how far to lift up after peeling up a single page
+float liftX = 9; //how far to move in after peeling up a single page
 float downSpeed = 1; // what speed to move arm towards page at
 
 //direction to turn the page (BACKWARD makes page move right, FORWARD makes the page move left)
@@ -82,9 +88,10 @@ typedef enum {
     TP_STEP_2_DOWN = 4,
     TP_STEP_3_PEEL = 5,
     TP_STEP_4_LIFT = 6,
-    TP_STEP_5_SWING = 7,
-    TP_STEP_6_CLAMP = 8,
-    TP_STEP_7_CLEANUP = 9,
+    TP_STEP_5a_SWEEP = 7,
+    TP_STEP_5b_SWEEP = 8,
+    TP_STEP_6_CLAMP = 9,
+    TP_STEP_7_CLEANUP = 10,
 } state;
 state PREVIOUS_STATE = START;
 state CURRENT_STATE = IDLE;
@@ -96,6 +103,14 @@ void WifiDataToParse()
     xTarg = EWD::recvFl();
     yTarg = EWD::recvFl();
     go = EWD::recvBl();
+    hoverX = EWD::recvFl();
+    hoverY = EWD::recvFl();
+    targetForceY = EWD::recvFl();
+    peelDist = EWD::recvFl();
+    peelTime = EWD::recvFl();
+    liftHeight = EWD::recvFl();
+    liftX = EWD::recvFl();
+    downSpeed = EWD::recvFl();
 }
 void WifiDataToSend()
 {
@@ -105,6 +120,7 @@ void WifiDataToSend()
     EWD::sendFl(torque2);
     EWD::sendFl(Fx);
     EWD::sendFl(Fy);
+    EWD::sendIn(CURRENT_STATE);
 }
 
 void setup()
@@ -125,6 +141,13 @@ void setup()
     servo2.setSetAngles(-90, 90);
     servo2.setAngleLimits(theta2Max, theta2Min);
     servo2.setAngleImmediate(0);
+
+    servoSweeper.setConstrainRange(false);
+    servoSweeper.setVelAccelLimits(180, 180);
+    servoSweeper.setServoRangeValues(1000, 2000);
+    servoSweeper.setSetAngles(-45, 45);
+    servoSweeper.setAngleLimits(-90, 90);
+    servoSweeper.setAngleImmediate(0);
 
     //torque load cells
     torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
@@ -174,6 +197,12 @@ void run_state()
     case TP_STEP_4_LIFT:
         NEXT_STATE = state_tp_step_4_lift();
         break;
+    case TP_STEP_5a_SWEEP:
+        NEXT_STATE = state_tp_step_5a_sweep();
+        break;
+    case TP_STEP_5b_SWEEP:
+        NEXT_STATE = state_tp_step_5b_sweep();
+        break;
     default:
         break;
     }
@@ -189,6 +218,7 @@ void loop()
     }
     servo1.setEnable(enabled);
     servo2.setEnable(enabled);
+    servoSweeper.setEnable(enabled);
 
     if (torque1Sensor.is_ready()) {
         torque1 = torque1Sensor.get_units();
@@ -213,5 +243,6 @@ void loop()
     //run servo controllers
     servo1.run();
     servo2.run();
+    servoSweeper.run();
     delay(1);
 }
