@@ -63,8 +63,8 @@ HX711 torque2Sensor;
 forceController fc = forceController();
 
 //SETTINGS relevant to the book being used
-float hoverX = 12; // coordinate to move the servo arm (x direction) when beginning turn page routine
-float hoverY = 7; // coordinate to move the servo arm (y direction) when beginning turn page routine
+float hoverX = 14; // coordinate to move the servo arm (x direction) when beginning turn page routine
+float hoverY = 10; // coordinate to move the servo arm (y direction) when beginning turn page routine
 float targetForceY = -.08; // how much force (y direction) is being applied on the book
 float peelDist = .5; //how far to move tape wheel along book
 float peelTime = 2; //how long peel motion should take
