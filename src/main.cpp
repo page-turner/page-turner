@@ -22,6 +22,10 @@ JServoControllerAdvanced servo2 = JServoControllerAdvanced(servo2Driver);
 JMotorDriverEsp32Servo servoSweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
 JServoControllerAdvanced servoSweeper = JServoControllerAdvanced(servoSweeperDriver);
 
+JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 23, 22, 19); //pdw channel, enable, dirA, dirB
+JEncoderQuadratureAttachInterrupt motor1Encoder = JEncoderQuadratureAttachInterrupt(34, 35);
+jENCODER_MAKE_ISRS_MACRO(motor1Encoder);
+
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
 float yTarg = 0; //for debug, received over wifi
@@ -149,14 +153,27 @@ void setup()
     servoSweeper.setAngleLimits(-90, 90);
     servoSweeper.setAngleImmediate(0);
 
+    motor1Encoder.setUpInterrupts(motor1Encoder_jENCODER_ISR_A, motor1Encoder_jENCODER_ISR_B);
+    motor1Driver.enable();
+    motor1Driver.set(0); //make sure motor isn't turning
+    motor1Driver.disable();
+
     //torque load cells
     torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
     torque1Sensor.set_scale(18200); //calibrate sensor by changing this value
-    torque1Sensor.tare();
+    if (torque1Sensor.is_ready()) {
+        torque1Sensor.tare();
+    } else {
+        Serial.println("ERROR connecting to torque sensor 1");
+    }
 
     torque2Sensor.begin(torque2SensorDTPin, torque2SensorSCKPin); //hx711 DT, SCK
     torque2Sensor.set_scale(44000); //calibrate sensor by changing this value
-    torque2Sensor.tare();
+    if (torque2Sensor.is_ready()) {
+        torque2Sensor.tare();
+    } else {
+        Serial.println("ERROR connecting to torque sensor 2");
+    }
 
     EWD::routerName = "Brown-Guest"; //name of the wifi network you want to connect to
     EWD::routerPass = "-open-network-"; //password for your wifi network (enter "-open-network-" if the network has no password) (default: -open-network-)
@@ -219,6 +236,14 @@ void loop()
     servo1.setEnable(enabled);
     servo2.setEnable(enabled);
     servoSweeper.setEnable(enabled);
+
+    motor1Driver.setEnable(enabled);
+    motor1Encoder.run();
+    Serial.print(motor1Encoder.getVel());
+    Serial.print(",");
+    Serial.println(motor1Encoder.getPos());
+
+    motor1Driver.set(xTarg / 10.0);
 
     if (torque1Sensor.is_ready()) {
         torque1 = torque1Sensor.get_units();
