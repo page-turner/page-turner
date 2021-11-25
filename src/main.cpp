@@ -14,16 +14,25 @@ const byte torque1SensorSCKPin = 18;
 const byte torque2SensorDTPin = 5;
 const byte torque2SensorSCKPin = 17;
 
+//documentation for JMotor library here: https://joshua-8.github.io/JMotor/hierarchy.html
+
 JMotorDriverEsp32Servo servo1Driver = JMotorDriverEsp32Servo(8, 25); //pwm channel, pin
-JServoControllerAdvanced servo1 = JServoControllerAdvanced(servo1Driver);
+JServoController servo1 = JServoController(servo1Driver);
 JMotorDriverEsp32Servo servo2Driver = JMotorDriverEsp32Servo(9, 26); //pwm channel, pin
-JServoControllerAdvanced servo2 = JServoControllerAdvanced(servo2Driver);
+JServoController servo2 = JServoController(servo2Driver);
 
 JMotorDriverEsp32Servo servoSweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
-JServoControllerAdvanced servoSweeper = JServoControllerAdvanced(servoSweeperDriver);
+JServoController servoSweeper = JServoController(servoSweeperDriver);
 
-JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 23, 22, 19); //pdw channel, enable, dirA, dirB
-JEncoderQuadratureAttachInterrupt motor1Encoder = JEncoderQuadratureAttachInterrupt(34, 35);
+JVoltageCompConst motorVoltageComp = JVoltageCompConst(5);
+JMotorCompStandardConfig motorCompConfig = JMotorCompStandardConfig(3.0, 60, 4.5, 128, 5, 160, 80);
+JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 23, 22, 19); //portA //pdw channel, enable, dirA, dirB
+JEncoderQuadratureAttachInterrupt motor1Encoder = JEncoderQuadratureAttachInterrupt(34, 35, 360.0 / (151.002 * 28));
+JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motorCompConfig);
+JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 15, 0);
+JMotorControllerClosed motor1Controller
+    = JMotorControllerClosed(motor1Driver, motor1Compensator, motor1Encoder, motor1ControlLoop, 180, 180, 10, false, 2);
+
 jENCODER_MAKE_ISRS_MACRO(motor1Encoder);
 
 bool enabled = false; //received over wifi
@@ -130,6 +139,7 @@ void WifiDataToSend()
 void setup()
 {
     Serial.begin(115200);
+    Serial.println("---starting---");
 
     //set up and calibrate servos
     servo1.setConstrainRange(false);
@@ -236,14 +246,12 @@ void loop()
     servo1.setEnable(enabled);
     servo2.setEnable(enabled);
     servoSweeper.setEnable(enabled);
-
     motor1Driver.setEnable(enabled);
-    motor1Encoder.run();
-    Serial.print(motor1Encoder.getVel());
-    Serial.print(",");
-    Serial.println(motor1Encoder.getPos());
-
-    motor1Driver.set(xTarg / 10.0);
+    motor1Controller.setVelTarget(xTarg * 10, false);
+    // Serial.print(motor1Controller.getVel());
+    // Serial.print(",");
+    // Serial.print(motor1Controller.getPos());
+    // Serial.println();
 
     if (torque1Sensor.is_ready()) {
         torque1 = torque1Sensor.get_units();
@@ -265,7 +273,8 @@ void loop()
         servo2.setAngleSmoothed(theta2);
     }
 
-    //run servo controllers
+    //run motor controllers
+    motor1Controller.run();
     servo1.run();
     servo2.run();
     servoSweeper.run();
