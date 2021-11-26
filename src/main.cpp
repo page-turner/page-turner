@@ -25,13 +25,13 @@ JMotorDriverEsp32Servo servoSweeperDriver = JMotorDriverEsp32Servo(10, 33); //pw
 JServoController servoSweeper = JServoController(servoSweeperDriver);
 
 JVoltageCompConst motorVoltageComp = JVoltageCompConst(5);
-JMotorCompStandardConfig motorCompConfig = JMotorCompStandardConfig(3.0, 60, 4.5, 128, 5, 160, 80);
+JMotorCompStandardConfig motorCompConfig = JMotorCompStandardConfig(3.0, 60, 4.5, 128, 5, 160, 50);
 JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 23, 22, 19); //portA //pdw channel, enable, dirA, dirB
 JEncoderQuadratureAttachInterrupt motor1Encoder = JEncoderQuadratureAttachInterrupt(34, 35, 360.0 / (151.002 * 28));
 JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motorCompConfig);
-JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 15, 0);
+JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 30);
 JMotorControllerClosed motor1Controller
-    = JMotorControllerClosed(motor1Driver, motor1Compensator, motor1Encoder, motor1ControlLoop, 180, 180, 10, false, 2);
+    = JMotorControllerClosed(motor1Driver, motor1Compensator, motor1Encoder, motor1ControlLoop, 150, 180, 5, false, 2);
 
 jENCODER_MAKE_ISRS_MACRO(motor1Encoder);
 
@@ -248,17 +248,14 @@ void loop()
     servoSweeper.setEnable(enabled);
     motor1Driver.setEnable(enabled);
     motor1Controller.setVelTarget(xTarg * 10, false);
-    // Serial.print(motor1Controller.getVel());
-    // Serial.print(",");
-    // Serial.print(motor1Controller.getPos());
-    // Serial.println();
+    torque1 += 0.001 * (motor1Controller.controlLoop.getError() - torque1);
 
-    if (torque1Sensor.is_ready()) {
-        torque1 = torque1Sensor.get_units();
-    }
-    if (torque2Sensor.is_ready()) {
-        torque2 = -torque2Sensor.get_units(); //note negative sign because loadcell was installed backwards
-    }
+    // if (torque1Sensor.is_ready()) {
+    //     torque1 = torque1Sensor.get_units();
+    // }
+    // if (torque2Sensor.is_ready()) {
+    //     torque2 = -torque2Sensor.get_units(); //note negative sign because loadcell was installed backwards
+    // }
 
     torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
 
