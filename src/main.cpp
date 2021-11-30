@@ -6,34 +6,22 @@
 #include <Arduino.h>
 #include <Derivs_Limiter.h>
 #include <ESP32_easy_wifi_data.h>
-#include <HX711.h>
 #include <JMotor.h>
 
-const byte torque1SensorDTPin = 19;
-const byte torque1SensorSCKPin = 18;
-const byte torque2SensorDTPin = 5;
-const byte torque2SensorSCKPin = 17;
-
 //documentation for JMotor library here: https://joshua-8.github.io/JMotor/hierarchy.html
-
-JMotorDriverEsp32Servo servo1Driver = JMotorDriverEsp32Servo(8, 25); //pwm channel, pin
-JServoController servo1 = JServoController(servo1Driver);
-JMotorDriverEsp32Servo servo2Driver = JMotorDriverEsp32Servo(9, 26); //pwm channel, pin
-JServoController servo2 = JServoController(servo2Driver);
 
 JMotorDriverEsp32Servo servoSweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
 JServoController servoSweeper = JServoController(servoSweeperDriver);
 
 JVoltageCompConst motorVoltageComp = JVoltageCompConst(5);
-JMotorCompStandardConfig motorCompConfig = JMotorCompStandardConfig(3.0, 60, 4.5, 128, 5, 160, 50);
-JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 23, 22, 19); //portA //pdw channel, enable, dirA, dirB
-JEncoderQuadratureAttachInterrupt motor1Encoder = JEncoderQuadratureAttachInterrupt(34, 35, 360.0 / (151.002 * 28));
-JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motorCompConfig);
-JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 30);
-JMotorControllerClosed motor1Controller
-    = JMotorControllerClosed(motor1Driver, motor1Compensator, motor1Encoder, motor1ControlLoop, 150, 180, 5, false, 2);
-
-jENCODER_MAKE_ISRS_MACRO(motor1Encoder);
+// JMotorCompStandardConfig motorCompConfig = JMotorCompStandardConfig(3.0, 60, 4.5, 128, 5, 160, 50);
+JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 5, 18, 19); //pdw channel, enable, dirA, dirB
+JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(false, .5);
+// JEncoderQuadratureAttachInterrupt motor1Encoder = JEncoderQuadratureAttachInterrupt(34, 35, 360.0 / (151.002 * 28));
+// JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motorCompConfig);
+// JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 30);
+// JMotorControllerClosed motor1Controller
+//   = JMotorControllerClosed(motor1Driver, motor1Compensator, motor1Encoder, motor1ControlLoop, 150, 180, 5, false, 2);
 
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
@@ -47,7 +35,7 @@ float Fy = 0;
 //arm position
 float x = 0;
 float y = 0;
-//servo target angles
+//arm angles
 float theta1 = 0;
 float theta2 = 0;
 //arm constants
@@ -67,10 +55,6 @@ bool did_state_change = true;
 //smooth acceleration for arm position
 Derivs_Limiter xLimiter = Derivs_Limiter(6, 3);
 Derivs_Limiter yLimiter = Derivs_Limiter(6, 3);
-
-//for reading loadcells
-HX711 torque1Sensor;
-HX711 torque2Sensor;
 
 //force controller using pid to maintain constant force when peeling a page
 forceController fc = forceController();
@@ -127,8 +111,8 @@ void WifiDataToParse()
 }
 void WifiDataToSend()
 {
-    EWD::sendFl(servo1.getPos());
-    EWD::sendFl(servo2.getPos());
+    EWD::sendFl(0);
+    EWD::sendFl(0);
     EWD::sendFl(torque1);
     EWD::sendFl(torque2);
     EWD::sendFl(Fx);
@@ -141,21 +125,11 @@ void setup()
     Serial.begin(115200);
     Serial.println("---starting---");
 
+    motor1Driver.enable();
+    motor1Driver.set(0); //make sure motor isn't turning
+    motor1Driver.disable();
+
     //set up and calibrate servos
-    servo1.setConstrainRange(false);
-    servo1.setVelAccelLimits(250, 400);
-    servo1.setServoRangeValues(840, 2131);
-    servo1.setSetAngles(-90, 90);
-    servo1.setAngleLimits(theta1Max, theta1Min);
-    servo1.setAngleImmediate(0);
-
-    servo2.setConstrainRange(false);
-    servo2.setVelAccelLimits(250, 400);
-    servo2.setServoRangeValues(870, 2151);
-    servo2.setSetAngles(-90, 90);
-    servo2.setAngleLimits(theta2Max, theta2Min);
-    servo2.setAngleImmediate(0);
-
     servoSweeper.setConstrainRange(false);
     servoSweeper.setVelAccelLimits(180, 180);
     servoSweeper.setServoRangeValues(1000, 2000);
@@ -163,27 +137,7 @@ void setup()
     servoSweeper.setAngleLimits(-90, 90);
     servoSweeper.setAngleImmediate(0);
 
-    motor1Encoder.setUpInterrupts(motor1Encoder_jENCODER_ISR_A, motor1Encoder_jENCODER_ISR_B);
-    motor1Driver.enable();
-    motor1Driver.set(0); //make sure motor isn't turning
-    motor1Driver.disable();
-
-    //torque load cells
-    torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
-    torque1Sensor.set_scale(18200); //calibrate sensor by changing this value
-    if (torque1Sensor.is_ready()) {
-        torque1Sensor.tare();
-    } else {
-        Serial.println("ERROR connecting to torque sensor 1");
-    }
-
-    torque2Sensor.begin(torque2SensorDTPin, torque2SensorSCKPin); //hx711 DT, SCK
-    torque2Sensor.set_scale(44000); //calibrate sensor by changing this value
-    if (torque2Sensor.is_ready()) {
-        torque2Sensor.tare();
-    } else {
-        Serial.println("ERROR connecting to torque sensor 2");
-    }
+    Wire.begin();
 
     EWD::routerName = "Brown-Guest"; //name of the wifi network you want to connect to
     EWD::routerPass = "-open-network-"; //password for your wifi network (enter "-open-network-" if the network has no password) (default: -open-network-)
@@ -243,19 +197,12 @@ void loop()
     if (EWD::timedOut()) {
         enabled = false;
     }
-    servo1.setEnable(enabled);
-    servo2.setEnable(enabled);
     servoSweeper.setEnable(enabled);
     motor1Driver.setEnable(enabled);
-    motor1Controller.setVelTarget(xTarg * 10, false);
-    torque1 += 0.001 * (motor1Controller.controlLoop.getError() - torque1);
-
-    // if (torque1Sensor.is_ready()) {
-    //     torque1 = torque1Sensor.get_units();
-    // }
-    // if (torque2Sensor.is_ready()) {
-    //     torque2 = -torque2Sensor.get_units(); //note negative sign because loadcell was installed backwards
-    // }
+    motor1Driver.set(xTarg / 10.0);
+    Serial.println(encoder1.getVel());
+    // motor1Controller.setVelTarget(xTarg * 10, false);
+    // torque1 += 0.001 * (motor1Controller.controlLoop.getError() - torque1);
 
     torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
 
@@ -266,14 +213,13 @@ void loop()
     y = yLimiter.calc();
     //calculate arm kinematics (by having this separate outside the state machine, states can't directly set servo angles)
     if (cartToAngles(x, y, theta1, theta2, ARM_SETTINGS)) {
-        servo1.setAngleSmoothed(theta1);
-        servo2.setAngleSmoothed(theta2);
+        // servo1.setAngleSmoothed(theta1);
+        // servo2.setAngleSmoothed(theta2);
     }
 
     //run motor controllers
-    motor1Controller.run();
-    servo1.run();
-    servo2.run();
+    // motor1Controller.run();
+    encoder1.run();
     servoSweeper.run();
     delay(1);
 }

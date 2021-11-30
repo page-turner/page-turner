@@ -8,7 +8,7 @@
 
 bool armAtTarget()
 {
-    return (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget() && servo1.isPosAtTarget() && servo2.isPosAtTarget());
+    return (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget() /* && servo1.isPosAtTarget() && servo2.isPosAtTarget()*/);
 }
 
 /**
@@ -56,8 +56,8 @@ state state_tp_step_1_begin()
 state state_tp_step_2_down()
 {
     if (did_state_change) {
-        torque1Sensor.tare(3);
-        torque2Sensor.tare(3);
+        // torque1Sensor.tare(3);
+        // torque2Sensor.tare(3);
         Fx = 0;
         Fy = 0;
         xLimiter.resetTime();
