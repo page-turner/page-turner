@@ -14,14 +14,18 @@ JMotorDriverEsp32Servo servoSweeperDriver = JMotorDriverEsp32Servo(10, 33); //pw
 JServoController servoSweeper = JServoController(servoSweeperDriver);
 
 JVoltageCompConst motorVoltageComp = JVoltageCompConst(5);
+
 // JMotorCompStandardConfig motorCompConfig = JMotorCompStandardConfig(3.0, 60, 4.5, 128, 5, 160, 50);
-JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 5, 18, 19); //pdw channel, enable, dirA, dirB
-JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(false, .5);
+JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 19, 18, 5); //pdw channel, enable, dirA, dirB
+JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(false, .5); //invert, dist multiplier
 // JEncoderQuadratureAttachInterrupt motor1Encoder = JEncoderQuadratureAttachInterrupt(34, 35, 360.0 / (151.002 * 28));
 // JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motorCompConfig);
 // JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 30);
 // JMotorControllerClosed motor1Controller
 //   = JMotorControllerClosed(motor1Driver, motor1Compensator, motor1Encoder, motor1ControlLoop, 150, 180, 5, false, 2);
+
+JMotorDriverEsp32L293 motor2Driver = JMotorDriverEsp32L293(2, 4, 16, 17); //pdw channel, enable, dirA, dirB
+JEncoderAS5048bI2C encoder2 = JEncoderAS5048bI2C(false, .5, 68); //invert, dist multiplier, address (reprogrammed)
 
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
@@ -200,7 +204,11 @@ void loop()
     servoSweeper.setEnable(enabled);
     motor1Driver.setEnable(enabled);
     motor1Driver.set(xTarg / 10.0);
-    Serial.println(encoder1.getVel());
+    motor2Driver.setEnable(enabled);
+    motor2Driver.set(yTarg / 10.0);
+    // Serial.print(encoder1.getVel());
+    // Serial.print(",");
+    // Serial.println(encoder2.getVel());
     // motor1Controller.setVelTarget(xTarg * 10, false);
     // torque1 += 0.001 * (motor1Controller.controlLoop.getError() - torque1);
 
@@ -219,7 +227,9 @@ void loop()
 
     //run motor controllers
     // motor1Controller.run();
+    // motor2Controller.run();
     encoder1.run();
+    encoder2.run();
     servoSweeper.run();
     delay(1);
 }
