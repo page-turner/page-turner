@@ -118,17 +118,34 @@ state state_tp_step_5b_sweep()
         servoSweeper.setAngleSmoothed(-90);
     }
     if (servoSweeper.isPosAtTarget()) {
-        return TP_STEP_6_CLAMP;
+        return TP_STEP_6a_CLAMP;
     }
     return CURRENT_STATE;
 }
 
-state state_tp_step_6_clamp()
+state state_tp_step_6a_clamp()
 {
     if (did_state_change) {
-        
+        DIRECTION == BACKWARD ? clampSweeper1.setAngleSmoothed(85) : clampSweeper2.setAngleSmoothed(85);
     }
-    if (clampSweeper.isPosAtTarget()) {
+    if (DIRECTION == BACKWARD && clampSweeper1.isPosAtTarget()) {
+        return TP_STEP_6b_CLAMP;
+    }
+    if (DIRECTION == FORWARD && clampSweeper2.isPosAtTarget()) {
+        return TP_STEP_6b_CLAMP;
+    }
+    return CURRENT_STATE;
+}
+
+state state_tp_step_6b_clamp()
+{
+    if (did_state_change) {
+        DIRECTION == BACKWARD ? clampSweeper1.setAngleSmoothed(-90) : clampSweeper2.setAngleSmoothed(-90);
+    }
+    if (DIRECTION == BACKWARD && clampSweeper1.isPosAtTarget()) {
+        return TP_STEP_7_CLEANUP;
+    }
+    if (DIRECTION == FORWARD && clampSweeper2.isPosAtTarget()) {
         return TP_STEP_7_CLEANUP;
     }
     return CURRENT_STATE;

@@ -22,8 +22,10 @@ JServoControllerAdvanced servo2 = JServoControllerAdvanced(servo2Driver);
 JMotorDriverEsp32Servo servoSweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
 JServoControllerAdvanced servoSweeper = JServoControllerAdvanced(servoSweeperDriver);
 
-JMotorDriverEsp32Servo clampSweeperDriver = JMotorDriverEsp32Servo(_, _); //pwm channel, pin
-JServoControllerAdvanced clampSweeper = JServoControllerAdvanced(clampSweeperDriver);
+JMotorDriverEsp32Servo clampSweeper1Driver = JMotorDriverEsp32Servo(11, 34); //pwm channel, pin
+JServoControllerAdvanced clampSweeper1 = JServoControllerAdvanced(clampSweeper1Driver);
+JMotorDriverEsp32Servo clampSweeper2Driver = JMotorDriverEsp32Servo(12, 35); //pwm channel, pin
+JServoControllerAdvanced clampSweeper2 = JServoControllerAdvanced(clampSweeper2Driver);
 
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
@@ -93,8 +95,9 @@ typedef enum {
     TP_STEP_4_LIFT = 6,
     TP_STEP_5a_SWEEP = 7,
     TP_STEP_5b_SWEEP = 8,
-    TP_STEP_6_CLAMP = 9,
-    TP_STEP_7_CLEANUP = 10,
+    TP_STEP_6a_CLAMP = 9,
+    TP_STEP_6b_CLAMP = 10,
+    TP_STEP_7_CLEANUP = 11,
 } state;
 state PREVIOUS_STATE = START;
 state CURRENT_STATE = IDLE;
@@ -205,6 +208,12 @@ void run_state()
         break;
     case TP_STEP_5b_SWEEP:
         NEXT_STATE = state_tp_step_5b_sweep();
+        break;
+    case TP_STEP_6a_CLAMP:
+        NEXT_STATE = state_tp_step_6a_clamp();
+        break;
+    case TP_STEP_6b_CLAMP:
+        NEXT_STATE = state_tp_step_6b_clamp();
         break;
     default:
         break;
