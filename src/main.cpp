@@ -22,6 +22,9 @@ JServoControllerAdvanced servo2 = JServoControllerAdvanced(servo2Driver);
 JMotorDriverEsp32Servo servoSweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
 JServoControllerAdvanced servoSweeper = JServoControllerAdvanced(servoSweeperDriver);
 
+JMotorDriverEsp32Servo clampSweeperDriver = JMotorDriverEsp32Servo(_, _); //pwm channel, pin
+JServoControllerAdvanced clampSweeper = JServoControllerAdvanced(clampSweeperDriver);
+
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
 float yTarg = 0; //for debug, received over wifi

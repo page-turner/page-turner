@@ -118,7 +118,24 @@ state state_tp_step_5b_sweep()
         servoSweeper.setAngleSmoothed(-90);
     }
     if (servoSweeper.isPosAtTarget()) {
-        return IDLE; // change later to TP_STEP_6_CLAMP
+        return TP_STEP_6_CLAMP;
     }
     return CURRENT_STATE;
+}
+
+state state_tp_step_6_clamp()
+{
+    if (did_state_change) {
+        
+    }
+    if (clampSweeper.isPosAtTarget()) {
+        return TP_STEP_7_CLEANUP;
+    }
+    return CURRENT_STATE;
+}
+
+state state_tp_step_7_cleanup()
+{
+    if (did_state_change) {}
+    return IDLE;
 }
