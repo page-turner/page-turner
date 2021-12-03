@@ -1,6 +1,7 @@
 #define EWDmaxWifiSendBufSize 100
 #define EWDmaxWifiRecvBufSize 100
 
+#include "RunningAverage.h"
 #include "TwoAxisArmKinematics.h"
 #include "forceController.h"
 #include <Arduino.h>
@@ -30,6 +31,9 @@ JMotorCompStandard motor2Compensator = JMotorCompStandard(motorVoltageComp, moto
 JControlLoopBasic motor2ControlLoop = JControlLoopBasic(/*P*/ 20);
 JMotorControllerClosed motor2Controller
     = JMotorControllerClosed(motor2Driver, motor2Compensator, encoder2, motor2ControlLoop, 150, 180, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
+
+RunningAverage torque1Smoother = RunningAverage(150);
+RunningAverage torque2Smoother = RunningAverage(150);
 
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
@@ -145,6 +149,9 @@ void setup()
     servoSweeper.setAngleLimits(-90, 90);
     servoSweeper.setAngleImmediate(0);
 
+    torque1Smoother.clear();
+    torque2Smoother.clear();
+
     Wire.begin();
 
     EWD::routerName = "Brown-Guest"; //name of the wifi network you want to connect to
@@ -212,16 +219,19 @@ void loop()
     motor1Controller.setVel(xTarg);
     motor2Controller.setVel(yTarg);
 
-    torque1 += 0.001 * ((motor1Controller.controlLoop.getResult()) - torque1);
-    torque2 += 1 * ((motor2Controller.getDriverSetVal()) - torque2);
+    torque1Smoother.addValue(100.0 * motor1Controller.controlLoop.getError());
+    torque1 = torque1Smoother.getFastAverage();
+    torque2Smoother.addValue(100.0 * motor2Controller.controlLoop.getError());
+    torque2 = torque2Smoother.getFastAverage();
 
     Serial.print("_:");
     Serial.print(0);
     Serial.print(" torque1:");
     Serial.print(torque1);
     Serial.print(" torque2:");
-    Serial.println(torque2 * 100.0);
+    Serial.println(torque2);
 
+    //move below cartToAngles?
     torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
 
     run_state();
