@@ -15,17 +15,21 @@ JServoController servoSweeper = JServoController(servoSweeperDriver);
 
 JVoltageCompConst motorVoltageComp = JVoltageCompConst(5);
 
-// JMotorCompStandardConfig motorCompConfig = JMotorCompStandardConfig(3.0, 60, 4.5, 128, 5, 160, 50);
 JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 19, 18, 5); //pdw channel, enable, dirA, dirB
-JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(false, .5); //invert, dist multiplier
-// JEncoderQuadratureAttachInterrupt motor1Encoder = JEncoderQuadratureAttachInterrupt(34, 35, 360.0 / (151.002 * 28));
-// JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motorCompConfig);
-// JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 30);
-// JMotorControllerClosed motor1Controller
-//   = JMotorControllerClosed(motor1Driver, motor1Compensator, motor1Encoder, motor1ControlLoop, 150, 180, 5, false, 2);
+JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(true, 360.0 * 1.0, 64, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
+JMotorCompStandardConfig motor1CompConfig = JMotorCompStandardConfig(1.16, 9.8, 1.85, 37, 5, 99, 50);
+JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motor1CompConfig);
+JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 20);
+JMotorControllerClosed motor1Controller
+    = JMotorControllerClosed(motor1Driver, motor1Compensator, encoder1, motor1ControlLoop, 150, 180, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
 
 JMotorDriverEsp32L293 motor2Driver = JMotorDriverEsp32L293(2, 4, 16, 17); //pdw channel, enable, dirA, dirB
-JEncoderAS5048bI2C encoder2 = JEncoderAS5048bI2C(false, .5, 68); //invert, dist multiplier, address (reprogrammed)
+JEncoderAS5048bI2C encoder2 = JEncoderAS5048bI2C(true, 360.0 * 1.0, 68, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
+JMotorCompStandardConfig motor2CompConfig = JMotorCompStandardConfig(1.16, 9.8, 1.85, 37, 5, 99, 50);
+JMotorCompStandard motor2Compensator = JMotorCompStandard(motorVoltageComp, motor2CompConfig);
+JControlLoopBasic motor2ControlLoop = JControlLoopBasic(/*P*/ 20);
+JMotorControllerClosed motor2Controller
+    = JMotorControllerClosed(motor2Driver, motor2Compensator, encoder2, motor2ControlLoop, 150, 180, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
 
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
@@ -115,8 +119,8 @@ void WifiDataToParse()
 }
 void WifiDataToSend()
 {
-    EWD::sendFl(0);
-    EWD::sendFl(0);
+    EWD::sendFl(motor1Controller.getPos());
+    EWD::sendFl(motor2Controller.getPos());
     EWD::sendFl(torque1);
     EWD::sendFl(torque2);
     EWD::sendFl(Fx);
@@ -202,15 +206,21 @@ void loop()
         enabled = false;
     }
     servoSweeper.setEnable(enabled);
-    motor1Driver.setEnable(enabled);
-    motor1Driver.set(xTarg / 10.0);
-    motor2Driver.setEnable(enabled);
-    motor2Driver.set(yTarg / 10.0);
-    // Serial.print(encoder1.getVel());
-    // Serial.print(",");
-    // Serial.println(encoder2.getVel());
-    // motor1Controller.setVelTarget(xTarg * 10, false);
-    // torque1 += 0.001 * (motor1Controller.controlLoop.getError() - torque1);
+    motor1Controller.setEnable(enabled);
+    motor2Controller.setEnable(enabled);
+
+    motor1Controller.setVel(xTarg);
+    motor2Controller.setVel(yTarg);
+
+    torque1 += 0.001 * ((motor1Controller.controlLoop.getResult()) - torque1);
+    torque2 += 1 * ((motor2Controller.getDriverSetVal()) - torque2);
+
+    Serial.print("_:");
+    Serial.print(0);
+    Serial.print(" torque1:");
+    Serial.print(torque1);
+    Serial.print(" torque2:");
+    Serial.println(torque2 * 100.0);
 
     torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
 
@@ -226,10 +236,8 @@ void loop()
     }
 
     //run motor controllers
-    // motor1Controller.run();
-    // motor2Controller.run();
-    encoder1.run();
-    encoder2.run();
+    motor1Controller.run();
+    motor2Controller.run();
     servoSweeper.run();
     delay(1);
 }
