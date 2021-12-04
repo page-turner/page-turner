@@ -219,9 +219,9 @@ void loop()
     motor1Controller.setVel(xTarg);
     motor2Controller.setVel(yTarg);
 
-    torque1Smoother.addValue(100.0 * motor1Controller.controlLoop.getError());
+    torque1Smoother.addValue(100.0 * motor1Controller.controlLoop.getCtrlLoopOut());
     torque1 = torque1Smoother.getFastAverage();
-    torque2Smoother.addValue(100.0 * motor2Controller.controlLoop.getError());
+    torque2Smoother.addValue(100.0 * motor2Controller.controlLoop.getCtrlLoopOut());
     torque2 = torque2Smoother.getFastAverage();
 
     Serial.print("_:");
