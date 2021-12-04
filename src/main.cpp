@@ -19,13 +19,13 @@ JServoControllerAdvanced servo1 = JServoControllerAdvanced(servo1Driver);
 JMotorDriverEsp32Servo servo2Driver = JMotorDriverEsp32Servo(9, 26); //pwm channel, pin
 JServoControllerAdvanced servo2 = JServoControllerAdvanced(servo2Driver);
 
-JMotorDriverEsp32Servo servoSweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
-JServoControllerAdvanced servoSweeper = JServoControllerAdvanced(servoSweeperDriver);
+JMotorDriverEsp32Servo sweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
+JServoControllerAdvanced sweeper = JServoControllerAdvanced(sweeperDriver);
 
-JMotorDriverEsp32Servo clampSweeper1Driver = JMotorDriverEsp32Servo(11, 34); //pwm channel, pin
-JServoControllerAdvanced clampSweeper1 = JServoControllerAdvanced(clampSweeper1Driver);
-JMotorDriverEsp32Servo clampSweeper2Driver = JMotorDriverEsp32Servo(12, 35); //pwm channel, pin
-JServoControllerAdvanced clampSweeper2 = JServoControllerAdvanced(clampSweeper2Driver);
+JMotorDriverEsp32Servo leftClampDriver = JMotorDriverEsp32Servo(11, 14); //pwm channel, pin
+JServoControllerAdvanced leftClamp = JServoControllerAdvanced(leftClampDriver);
+JMotorDriverEsp32Servo rightClampDriver = JMotorDriverEsp32Servo(12, 27); //pwm channel, pin
+JServoControllerAdvanced rightClamp = JServoControllerAdvanced(rightClampDriver);
 
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
@@ -148,12 +148,12 @@ void setup()
     servo2.setAngleLimits(theta2Max, theta2Min);
     servo2.setAngleImmediate(0);
 
-    servoSweeper.setConstrainRange(false);
-    servoSweeper.setVelAccelLimits(180, 180);
-    servoSweeper.setServoRangeValues(1000, 2000);
-    servoSweeper.setSetAngles(-45, 45);
-    servoSweeper.setAngleLimits(-90, 90);
-    servoSweeper.setAngleImmediate(0);
+    sweeper.setConstrainRange(false);
+    sweeper.setVelAccelLimits(180, 180);
+    sweeper.setServoRangeValues(1000, 2000);
+    sweeper.setSetAngles(-45, 45);
+    sweeper.setAngleLimits(-90, 90);
+    sweeper.setAngleImmediate(0);
 
     //torque load cells
     torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
@@ -230,7 +230,7 @@ void loop()
     }
     servo1.setEnable(enabled);
     servo2.setEnable(enabled);
-    servoSweeper.setEnable(enabled);
+    sweeper.setEnable(enabled);
 
     if (torque1Sensor.is_ready()) {
         torque1 = torque1Sensor.get_units();
@@ -255,6 +255,6 @@ void loop()
     //run servo controllers
     servo1.run();
     servo2.run();
-    servoSweeper.run();
+    sweeper.run();
     delay(1);
 }

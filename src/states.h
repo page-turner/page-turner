@@ -32,7 +32,7 @@ state state_tp_setup()
         // reset variables (if any)
         // DETERMINE WHICH DIRECTION TO GO IN
         DIRECTION = FORWARD;
-        servoSweeper.setAngleSmoothed(-90);
+        sweeper.setAngleSmoothed(-90);
     }
     return TP_STEP_1_BEGIN;
 }
@@ -104,9 +104,9 @@ state state_tp_step_4_lift()
 state state_tp_step_5a_sweep()
 {
     if (did_state_change) {
-        servoSweeper.setAngleSmoothed(85);
+        sweeper.setAngleSmoothed(85);
     }
-    if (servoSweeper.isPosAtTarget()) {
+    if (sweeper.isPosAtTarget()) {
         return TP_STEP_5b_SWEEP;
     }
     return CURRENT_STATE;
@@ -115,9 +115,9 @@ state state_tp_step_5a_sweep()
 state state_tp_step_5b_sweep()
 {
     if (did_state_change) {
-        servoSweeper.setAngleSmoothed(-90);
+        sweeper.setAngleSmoothed(-90);
     }
-    if (servoSweeper.isPosAtTarget()) {
+    if (sweeper.isPosAtTarget()) {
         return TP_STEP_6a_CLAMP;
     }
     return CURRENT_STATE;
@@ -126,12 +126,12 @@ state state_tp_step_5b_sweep()
 state state_tp_step_6a_clamp()
 {
     if (did_state_change) {
-        DIRECTION == BACKWARD ? clampSweeper1.setAngleSmoothed(85) : clampSweeper2.setAngleSmoothed(85);
+        DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(85) : rightClamp.setAngleSmoothed(85);
     }
-    if (DIRECTION == BACKWARD && clampSweeper1.isPosAtTarget()) {
+    if (DIRECTION == BACKWARD && leftClamp.isPosAtTarget()) {
         return TP_STEP_6b_CLAMP;
     }
-    if (DIRECTION == FORWARD && clampSweeper2.isPosAtTarget()) {
+    if (DIRECTION == FORWARD && rightClamp.isPosAtTarget()) {
         return TP_STEP_6b_CLAMP;
     }
     return CURRENT_STATE;
@@ -140,12 +140,12 @@ state state_tp_step_6a_clamp()
 state state_tp_step_6b_clamp()
 {
     if (did_state_change) {
-        DIRECTION == BACKWARD ? clampSweeper1.setAngleSmoothed(-90) : clampSweeper2.setAngleSmoothed(-90);
+        DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(-90) : rightClamp.setAngleSmoothed(-90);
     }
-    if (DIRECTION == BACKWARD && clampSweeper1.isPosAtTarget()) {
+    if (DIRECTION == BACKWARD && leftClamp.isPosAtTarget()) {
         return TP_STEP_7_CLEANUP;
     }
-    if (DIRECTION == FORWARD && clampSweeper2.isPosAtTarget()) {
+    if (DIRECTION == FORWARD && rightClamp.isPosAtTarget()) {
         return TP_STEP_7_CLEANUP;
     }
     return CURRENT_STATE;
@@ -153,6 +153,6 @@ state state_tp_step_6b_clamp()
 
 state state_tp_step_7_cleanup()
 {
-    if (did_state_change) {}
+    if (did_state_change) { }
     return IDLE;
 }
