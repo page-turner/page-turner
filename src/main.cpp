@@ -239,7 +239,6 @@ void loop()
         torque2 = -torque2Sensor.get_units(); //note negative sign because loadcell was installed backwards
     }
 
-    torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
 
     run_state();
 
@@ -251,10 +250,12 @@ void loop()
         servo1.setAngleSmoothed(theta1);
         servo2.setAngleSmoothed(theta2);
     }
-
+    torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
     //run servo controllers
     servo1.run();
     servo2.run();
     sweeper.run();
+    leftClamp.run();
+    rightClamp.run();
     delay(1);
 }

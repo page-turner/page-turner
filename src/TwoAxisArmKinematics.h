@@ -3,6 +3,7 @@
 #include <Arduino.h>
 /**
  * @brief  reverse kinematics formula for a 2D arm
+ * @note  angles are in degrees
  * @param  x: (float) x coordinate
  * @param  y: (float) y coordinate
  * @param  theta1: (float&) angle for first servo 
@@ -17,11 +18,11 @@
  */
 bool cartToAngles(float x, float y, float& theta1, float& theta2, float d1, float d2, float theta1Min, float theta1Max, float theta2Min, float theta2Max)
 {
-    float potential_theta2 = acos((-sq(x) - sq(y) + sq(d1) + sq(d2)) / (2 * d1 * d2));
-    if (x < 0) {
+    float potential_theta2 = PI - acos((-sq(x) - sq(y) + sq(d1) + sq(d2)) / (2 * d1 * d2));
+    if (x > 0) {
         potential_theta2 = -potential_theta2;
     }
-    float potential_theta1 = asin((d2 * sin(potential_theta2)) / sqrt(sq(x) + sq(y))) + atan(y / x) - PI / 2;
+    float potential_theta1 = asin((d2 * -sin(potential_theta2)) / sqrt(sq(x) + sq(y))) + atan(y / x) - PI / 2;
     if (x < 0) {
         potential_theta1 = potential_theta1 + PI;
     }
@@ -36,7 +37,7 @@ bool cartToAngles(float x, float y, float& theta1, float& theta2, float d1, floa
 }
 
 /**
- * @brief  convert torque of the two load cells into force being applied by the arm
+ * @brief  convert torque measurements at the two joints into force being applied by the arm
  * @param  theta1: (float) angle of first servo
  * @param  theta2: (float) angle of second servo
  * @param  torque1: (float) torque of first servo
