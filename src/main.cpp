@@ -231,6 +231,8 @@ void loop()
     servo1.setEnable(enabled);
     servo2.setEnable(enabled);
     sweeper.setEnable(enabled);
+    leftClamp.setEnable(enabled);
+    rightClamp.setEnable(enabled);
 
     if (torque1Sensor.is_ready()) {
         torque1 = torque1Sensor.get_units();
@@ -238,7 +240,6 @@ void loop()
     if (torque2Sensor.is_ready()) {
         torque2 = -torque2Sensor.get_units(); //note negative sign because loadcell was installed backwards
     }
-
 
     run_state();
 
