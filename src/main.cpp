@@ -155,13 +155,13 @@ void setup()
     sweeper.setAngleLimits(-90, 90);
     sweeper.setAngleImmediate(0);
 
-    leftClamp.setServoRangeValues(1000, 2000);
+    leftClamp.setServoRangeValues(550, 1600);
     leftClamp.setSetAngles(-90, 90);
-    leftClamp.setAngleLimits(-90, 90);
+    leftClamp.setAngleLimits(90, -90);
 
-    rightClamp.setServoRangeValues(1000, 2000);
+    rightClamp.setServoRangeValues(550, 1600);
     rightClamp.setSetAngles(-90, 90);
-    rightClamp.setAngleLimits(-90, 90);
+    rightClamp.setAngleLimits(90, -90);
 
     //torque load cells
     torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
