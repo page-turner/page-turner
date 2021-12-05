@@ -15,17 +15,17 @@ const byte torque2SensorDTPin = 5;
 const byte torque2SensorSCKPin = 17;
 
 JMotorDriverEsp32Servo servo1Driver = JMotorDriverEsp32Servo(8, 25); //pwm channel, pin
-JServoControllerAdvanced servo1 = JServoControllerAdvanced(servo1Driver);
+JServoController servo1 = JServoController(servo1Driver);
 JMotorDriverEsp32Servo servo2Driver = JMotorDriverEsp32Servo(9, 26); //pwm channel, pin
-JServoControllerAdvanced servo2 = JServoControllerAdvanced(servo2Driver);
+JServoController servo2 = JServoController(servo2Driver);
 
 JMotorDriverEsp32Servo sweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
-JServoControllerAdvanced sweeper = JServoControllerAdvanced(sweeperDriver);
+JServoController sweeper = JServoController(sweeperDriver);
 
 JMotorDriverEsp32Servo leftClampDriver = JMotorDriverEsp32Servo(11, 14); //pwm channel, pin
-JServoControllerAdvanced leftClamp = JServoControllerAdvanced(leftClampDriver);
+JServoController leftClamp = JServoController(leftClampDriver);
 JMotorDriverEsp32Servo rightClampDriver = JMotorDriverEsp32Servo(12, 27); //pwm channel, pin
-JServoControllerAdvanced rightClamp = JServoControllerAdvanced(rightClampDriver);
+JServoController rightClamp = JServoController(rightClampDriver);
 
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
