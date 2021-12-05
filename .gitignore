@@ -1,4 +1,5 @@
 .pio
-.vscode
 desktop.ini
 src/workspace.code-workspace
+.vscode/c_cpp_properties.json
+.vscode/launch.json
