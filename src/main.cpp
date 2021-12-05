@@ -22,7 +22,7 @@ JMotorCompStandardConfig motor1CompConfig = JMotorCompStandardConfig(1.16, 9.8, 
 JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motor1CompConfig);
 JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 20);
 JMotorControllerClosed motor1Controller
-    = JMotorControllerClosed(motor1Driver, motor1Compensator, encoder1, motor1ControlLoop, 150, 180, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
+    = JMotorControllerClosed(motor1Driver, motor1Compensator, encoder1, motor1ControlLoop, 50, 30, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
 
 JMotorDriverEsp32L293 motor2Driver = JMotorDriverEsp32L293(2, 4, 16, 17); //pdw channel, enable, dirA, dirB
 JEncoderAS5048bI2C encoder2 = JEncoderAS5048bI2C(true, 360.0 * 1.0, 68, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
@@ -30,7 +30,7 @@ JMotorCompStandardConfig motor2CompConfig = JMotorCompStandardConfig(1.16, 9.8, 
 JMotorCompStandard motor2Compensator = JMotorCompStandard(motorVoltageComp, motor2CompConfig);
 JControlLoopBasic motor2ControlLoop = JControlLoopBasic(/*P*/ 20);
 JMotorControllerClosed motor2Controller
-    = JMotorControllerClosed(motor2Driver, motor2Compensator, encoder2, motor2ControlLoop, 150, 180, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
+    = JMotorControllerClosed(motor2Driver, motor2Compensator, encoder2, motor2ControlLoop, 50, 30, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
 
 RunningAverage torque1Smoother = RunningAverage(150);
 RunningAverage torque2Smoother = RunningAverage(150);
@@ -44,6 +44,8 @@ float torque1 = 0;
 float torque2 = 0;
 float Fx = 0;
 float Fy = 0;
+const float torque1Calibration = 1.0;
+const float torque2Calibration = 1.0;
 //arm position
 float x = 0;
 float y = 0;
@@ -58,6 +60,9 @@ const float theta1Max = 135;
 const float theta2Min = -135;
 const float theta2Max = 135;
 #define ARM_SETTINGS length_arm_1, length_arm_2, theta1Min, theta1Max, theta2Min, theta2Max
+
+int encoder1Zero = 0;
+int encoder2Zero = 0;
 
 //state machine variables
 unsigned long millis_since_last_state_update = 0;
@@ -140,6 +145,9 @@ void setup()
     motor1Driver.enable();
     motor1Driver.set(0); //make sure motor isn't turning
     motor1Driver.disable();
+    motor2Driver.enable();
+    motor2Driver.set(0); //make sure motor isn't turning
+    motor2Driver.disable();
 
     //set up and calibrate servos
     servoSweeper.setConstrainRange(false);
@@ -158,6 +166,9 @@ void setup()
     EWD::routerPass = "-open-network-"; //password for your wifi network (enter "-open-network-" if the network has no password) (default: -open-network-)
     EWD::wifiPort = 25210; //what port the esp32 communicates on if connected to a wifi network (default: 25210)
     EWD::setupWifi(WifiDataToParse, WifiDataToSend);
+
+    encoder1.setEncoderZero(encoder1Zero);
+    encoder2.setEncoderZero(encoder2Zero);
 }
 
 #include "states.h"
@@ -216,20 +227,20 @@ void loop()
     motor1Controller.setEnable(enabled);
     motor2Controller.setEnable(enabled);
 
-    motor1Controller.setVel(xTarg);
-    motor2Controller.setVel(yTarg);
+    motor1Controller.setOpenVel(xTarg, false); //for debug, delete
+    motor2Controller.setOpenVel(yTarg, false); //#########################################
 
-    torque1Smoother.addValue(100.0 * motor1Controller.controlLoop.getCtrlLoopOut());
+    torque1Smoother.addValue(torque1Calibration * motor1Controller.controlLoop.getCtrlLoopOut());
     torque1 = torque1Smoother.getFastAverage();
-    torque2Smoother.addValue(100.0 * motor2Controller.controlLoop.getCtrlLoopOut());
+    torque2Smoother.addValue(torque2Calibration * motor2Controller.controlLoop.getCtrlLoopOut());
     torque2 = torque2Smoother.getFastAverage();
 
     Serial.print("_:");
     Serial.print(0);
-    Serial.print(" torque1:");
-    Serial.print(torque1);
-    Serial.print(" torque2:");
-    Serial.println(torque2);
+    Serial.print(" angle1:");
+    Serial.print(motor1Controller.getPos());
+    Serial.print(" angle2:");
+    Serial.println(motor2Controller.getPos());
 
     //move below cartToAngles?
     torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
