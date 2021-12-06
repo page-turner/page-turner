@@ -17,20 +17,20 @@ JServoController servoSweeper = JServoController(servoSweeperDriver);
 JVoltageCompConst motorVoltageComp = JVoltageCompConst(5);
 
 JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 19, 18, 5); //pdw channel, enable, dirA, dirB
-JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(true, 360.0 * 1.0, 64, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
-JMotorCompStandardConfig motor1CompConfig = JMotorCompStandardConfig(1.16, 9.8, 1.85, 37, 5, 99, 50);
+JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(false, 360.0 * 1.0, 64, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
+JMotorCompStandardConfig motor1CompConfig = JMotorCompStandardConfig(2.0, 15.4, 2.6, 41, 5, 92, 50);
 JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motor1CompConfig);
 JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 20);
 JMotorControllerClosed motor1Controller
-    = JMotorControllerClosed(motor1Driver, motor1Compensator, encoder1, motor1ControlLoop, 50, 30, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
+    = JMotorControllerClosed(motor1Driver, motor1Compensator, encoder1, motor1ControlLoop, 500 /*todo:/=10*/, 30, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
 
 JMotorDriverEsp32L293 motor2Driver = JMotorDriverEsp32L293(2, 4, 16, 17); //pdw channel, enable, dirA, dirB
-JEncoderAS5048bI2C encoder2 = JEncoderAS5048bI2C(true, 360.0 * 1.0, 68, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
-JMotorCompStandardConfig motor2CompConfig = JMotorCompStandardConfig(1.16, 9.8, 1.85, 37, 5, 99, 50);
+JEncoderAS5048bI2C encoder2 = JEncoderAS5048bI2C(false, 360.0 * 1.0, 68, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
+JMotorCompStandardConfig motor2CompConfig = JMotorCompStandardConfig(2.0, 15.4, 2.6, 41, 5, 92, 50);
 JMotorCompStandard motor2Compensator = JMotorCompStandard(motorVoltageComp, motor2CompConfig);
 JControlLoopBasic motor2ControlLoop = JControlLoopBasic(/*P*/ 20);
 JMotorControllerClosed motor2Controller
-    = JMotorControllerClosed(motor2Driver, motor2Compensator, encoder2, motor2ControlLoop, 50, 30, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
+    = JMotorControllerClosed(motor2Driver, motor2Compensator, encoder2, motor2ControlLoop, 500 /*todo:/=10*/, 30, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
 
 RunningAverage torque1Smoother = RunningAverage(150);
 RunningAverage torque2Smoother = RunningAverage(150);
@@ -132,8 +132,8 @@ void WifiDataToSend()
     EWD::sendFl(motor2Controller.getPos());
     EWD::sendFl(torque1);
     EWD::sendFl(torque2);
-    EWD::sendFl(Fx);
-    EWD::sendFl(Fy);
+    EWD::sendFl(5.0 * motor1Controller.getDriverSetVal()); // Fx);
+    EWD::sendFl(5.0 * motor2Controller.getDriverSetVal()); // Fy);
     EWD::sendIn(CURRENT_STATE);
 }
 
@@ -142,9 +142,12 @@ void setup()
     Serial.begin(115200);
     Serial.println("---starting---");
 
+    motor1Driver.reverse = false;
     motor1Driver.enable();
     motor1Driver.set(0); //make sure motor isn't turning
     motor1Driver.disable();
+
+    motor2Driver.reverse = true;
     motor2Driver.enable();
     motor2Driver.set(0); //make sure motor isn't turning
     motor2Driver.disable();
@@ -237,10 +240,10 @@ void loop()
 
     Serial.print("_:");
     Serial.print(0);
-    Serial.print(" angle1:");
-    Serial.print(motor1Controller.getPos());
-    Serial.print(" angle2:");
-    Serial.println(motor2Controller.getPos());
+    Serial.print(" vel1:");
+    Serial.print(motor1Controller.getVel());
+    Serial.print(" vel2:");
+    Serial.println(motor2Controller.getVel());
 
     //move below cartToAngles?
     torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
