@@ -257,6 +257,7 @@ void loop()
     sweeper.setEnable(enabled);
     leftClamp.setEnable(enabled);
     rightClamp.setEnable(enabled);
+    centerClamp.setEnable(enabled);
 
     if (torque1Sensor.is_ready()) {
         torque1 = torque1Sensor.get_units();
@@ -282,5 +283,6 @@ void loop()
     sweeper.run();
     leftClamp.run();
     rightClamp.run();
+    centerClamp.run();
     delay(1);
 }
