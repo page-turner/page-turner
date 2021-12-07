@@ -17,20 +17,20 @@ JServoController servoSweeper = JServoController(servoSweeperDriver);
 JVoltageCompConst motorVoltageComp = JVoltageCompConst(5);
 
 JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 19, 18, 5); //pdw channel, enable, dirA, dirB
-JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(false, 360.0 * 1.0, 64, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
-JMotorCompStandardConfig motor1CompConfig = JMotorCompStandardConfig(2.0, 15.4, 2.6, 41, 5, 92, 50);
+JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(false, 360.0 * 34 / 25, 64, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
+JMotorCompStandardConfig motor1CompConfig = JMotorCompStandardConfig(2.45, 16.5, 2.8, 25, 5, 70, 50);
 JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motor1CompConfig);
 JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 20);
 JMotorControllerClosed motor1Controller
-    = JMotorControllerClosed(motor1Driver, motor1Compensator, encoder1, motor1ControlLoop, 500 /*todo:/=10*/, 30, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
+    = JMotorControllerClosed(motor1Driver, motor1Compensator, encoder1, motor1ControlLoop, 60, 30, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
 
 JMotorDriverEsp32L293 motor2Driver = JMotorDriverEsp32L293(2, 4, 16, 17); //pdw channel, enable, dirA, dirB
-JEncoderAS5048bI2C encoder2 = JEncoderAS5048bI2C(false, 360.0 * 1.0, 68, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
-JMotorCompStandardConfig motor2CompConfig = JMotorCompStandardConfig(2.0, 15.4, 2.6, 41, 5, 92, 50);
+JEncoderAS5048bI2C encoder2 = JEncoderAS5048bI2C(false, 360.0 * 27 / 25, 68, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
+JMotorCompStandardConfig motor2CompConfig = JMotorCompStandardConfig(3.3, 15, 3.45, 15, 5, 92, 50);
 JMotorCompStandard motor2Compensator = JMotorCompStandard(motorVoltageComp, motor2CompConfig);
 JControlLoopBasic motor2ControlLoop = JControlLoopBasic(/*P*/ 20);
 JMotorControllerClosed motor2Controller
-    = JMotorControllerClosed(motor2Driver, motor2Compensator, encoder2, motor2ControlLoop, 500 /*todo:/=10*/, 30, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
+    = JMotorControllerClosed(motor2Driver, motor2Compensator, encoder2, motor2ControlLoop, 60, 30, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
 
 RunningAverage torque1Smoother = RunningAverage(150);
 RunningAverage torque2Smoother = RunningAverage(150);
@@ -143,11 +143,13 @@ void setup()
     Serial.println("---starting---");
 
     motor1Driver.reverse = false;
+    motor1Driver.pwmDriver.setFrequencyAndResolution(5000);
     motor1Driver.enable();
     motor1Driver.set(0); //make sure motor isn't turning
     motor1Driver.disable();
 
     motor2Driver.reverse = true;
+    motor2Driver.pwmDriver.setFrequencyAndResolution(5000);
     motor2Driver.enable();
     motor2Driver.set(0); //make sure motor isn't turning
     motor2Driver.disable();
@@ -230,20 +232,14 @@ void loop()
     motor1Controller.setEnable(enabled);
     motor2Controller.setEnable(enabled);
 
-    motor1Controller.setOpenVel(xTarg, false); //for debug, delete
-    motor2Controller.setOpenVel(yTarg, false); //#########################################
+    motor1Controller.setPosTarget(xTarg, false); //for debug, delete
+    motor2Controller.setPosTarget(yTarg, false); //#########################################
 
     torque1Smoother.addValue(torque1Calibration * motor1Controller.controlLoop.getCtrlLoopOut());
     torque1 = torque1Smoother.getFastAverage();
     torque2Smoother.addValue(torque2Calibration * motor2Controller.controlLoop.getCtrlLoopOut());
     torque2 = torque2Smoother.getFastAverage();
 
-    Serial.print("_:");
-    Serial.print(0);
-    Serial.print(" vel1:");
-    Serial.print(motor1Controller.getVel());
-    Serial.print(" vel2:");
-    Serial.println(motor2Controller.getVel());
 
     //move below cartToAngles?
     torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
