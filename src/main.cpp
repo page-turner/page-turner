@@ -164,14 +164,17 @@ void setup()
     leftClamp.setServoRangeValues(550, 1600);
     leftClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
     leftClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
+    leftClamp.setAngleImmediate(clampClosedAngle);
 
     rightClamp.setServoRangeValues(550, 1600);
     rightClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
     rightClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
+    rightClamp.setAngleImmediate(clampClosedAngle);
 
     centerClamp.setServoRangeValues(550, 1600);
     centerClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
     centerClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
+    centerClamp.setAngleImmediate(clampClosedAngle);
 
     //torque load cells
     torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
@@ -198,8 +201,7 @@ void run_state()
     if (did_state_change) {
         millis_when_state_changed = millis();
         millis_since_last_state_update = 0;
-    }
-    else {
+    } else {
         millis_since_last_state_update = millis() - millis_when_state_changed;
     }
     state NEXT_STATE = CURRENT_STATE;
@@ -218,6 +220,7 @@ void run_state()
         break;
     case TP_STEP_3_OPEN_SIDE_CLAMP:
         NEXT_STATE = state_tp_step_3_open_side_clamp();
+        break;
     case TP_STEP_4_PEEL:
         NEXT_STATE = state_tp_step_4_peel();
         break;
