@@ -114,7 +114,6 @@ state state_tp_step_5_lift()
     return CURRENT_STATE;
 }
 
-// TODO
 state state_tp_step_6_close_side_clamp()
 {
     if (did_state_change) {
