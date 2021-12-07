@@ -131,7 +131,7 @@ state state_tp_step_6_close_side_clamp()
 state state_tp_step_7a_sweep()
 {
     if (did_state_change) {
-        sweeper.setAngleSmoothed(clampOpenAngle);
+        sweeper.setAngleSmoothed(90);
     }
     if (sweeper.isPosAtTarget()) {
         return TP_STEP_7b_SWEEP;
@@ -142,7 +142,7 @@ state state_tp_step_7a_sweep()
 state state_tp_step_7b_sweep()
 {
     if (did_state_change) {
-        sweeper.setAngleSmoothed(clampClosedAngle);
+        sweeper.setAngleSmoothed(-90);
     }
     if (sweeper.isPosAtTarget()) {
         return TP_STEP_8_OPEN_SIDE_CLAMP;
