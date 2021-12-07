@@ -26,7 +26,7 @@ JMotorDriverEsp32Servo leftClampDriver = JMotorDriverEsp32Servo(11, 14); //pwm c
 JServoController leftClamp = JServoController(leftClampDriver);
 JMotorDriverEsp32Servo rightClampDriver = JMotorDriverEsp32Servo(12, 27); //pwm channel, pin
 JServoController rightClamp = JServoController(rightClampDriver);
-JMotorDriverEsp32Servo centerClampDriver = JMotorDriverEsp32Servo(13, 28); //pwm channel, pin
+JMotorDriverEsp32Servo centerClampDriver = JMotorDriverEsp32Servo(13, 12); //pwm channel, pin
 JServoController centerClamp = JServoController(centerClampDriver);
 
 bool enabled = false; //received over wifi
