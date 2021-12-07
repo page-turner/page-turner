@@ -242,6 +242,9 @@ void run_state()
     case TP_STEP_9_CLOSE_SIDE_CLAMP:
         NEXT_STATE = state_tp_step_9_close_side_clamp();
         break;
+    case TP_STEP_10_CLEANUP:
+        NEXT_STATE = state_tp_step_10_cleanup();
+        break;
     default:
         break;
     }

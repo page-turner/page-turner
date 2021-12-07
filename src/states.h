@@ -42,11 +42,12 @@ state state_tp_step_1_begin()
     //go and hover above edge of book
     if (did_state_change) {
         xLimiter.setTarget(hoverX * DIRECTION);
-    }
-    //TODO: FOLLOW ARC INSTEAD??
-    if (xLimiter.isPosAtTarget()) {
         yLimiter.setTarget(hoverY);
     }
+    // //TODO: FOLLOW ARC INSTEAD??
+    // if (xLimiter.isPosAtTarget()) {
+    //     yLimiter.setTarget(hoverY);
+    // }
     if (armAtTarget()) {
         return TP_STEP_2_DOWN;
     }
@@ -77,7 +78,7 @@ state state_tp_step_3_open_side_clamp()
         // open the clamp on the side of the page that's being turned
         DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(clampOpenAngle) : rightClamp.setAngleSmoothed(clampOpenAngle);
     }
-    if ((DIRECTION == BACKWARD && leftClamp.isPosAtTarget()) || (DIRECTION == FORWARD && rightClamp.isPosAtTarget())) {
+    if (millis_since_last_state_update > 200) {
         return TP_STEP_4_PEEL;
     }
     return CURRENT_STATE;
@@ -121,7 +122,7 @@ state state_tp_step_6_close_side_clamp()
         DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(clampClosedAngle) : rightClamp.setAngleSmoothed(clampClosedAngle);
         centerClamp.setAngleSmoothed(85);
     }
-    if (((DIRECTION == BACKWARD && leftClamp.isPosAtTarget()) || (DIRECTION == FORWARD && rightClamp.isPosAtTarget())) && (centerClamp.isPosAtTarget())) {
+    if (millis_since_last_state_update > 200) {
         return TP_STEP_7a_SWEEP;
     }
     return CURRENT_STATE;
@@ -156,7 +157,7 @@ state state_tp_step_8_open_side_clamp()
         DIRECTION == BACKWARD ? rightClamp.setAngleSmoothed(clampOpenAngle) : leftClamp.setAngleSmoothed(clampOpenAngle);
         centerClamp.setAngleSmoothed(clampClosedAngle);
     }
-    if (((DIRECTION == BACKWARD && rightClamp.isPosAtTarget()) || (DIRECTION == FORWARD && leftClamp.isPosAtTarget())) && (centerClamp.isPosAtTarget())) {
+    if (millis_since_last_state_update > 1500) {
         return TP_STEP_9_CLOSE_SIDE_CLAMP;
     }
     return CURRENT_STATE;
@@ -167,14 +168,14 @@ state state_tp_step_9_close_side_clamp()
     if (did_state_change) {
         DIRECTION == BACKWARD ? rightClamp.setAngleSmoothed(clampClosedAngle) : leftClamp.setAngleSmoothed(clampClosedAngle);
     }
-    if ((DIRECTION == BACKWARD && rightClamp.isPosAtTarget()) || (DIRECTION == FORWARD && leftClamp.isPosAtTarget())) {
+    if (millis_since_last_state_update > 200) {
         return TP_STEP_10_CLEANUP;
     }
     return CURRENT_STATE;
 }
 
-state state_tp_step_7_cleanup()
+state state_tp_step_10_cleanup()
 {
-    if (did_state_change) { }
-    return TP_STEP_10_CLEANUP;
+    // if (did_state_change) { }
+    return IDLE;
 }
