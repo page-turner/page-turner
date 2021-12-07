@@ -30,7 +30,7 @@ state state_tp_setup()
 {
     if (did_state_change) {
         // reset variables (if any)
-        // DETERMINE WHICH DIRECTION TO GO IN
+        // TODO: DETERMINE WHICH DIRECTION TO GO IN
         DIRECTION = FORWARD;
         sweeper.setAngleSmoothed(-90);
     }
@@ -65,13 +65,25 @@ state state_tp_step_2_down()
         // tell servos to go down slowly
     }
     if (Fy < targetForceY) {
-        return TP_STEP_3_PEEL;
+        return TP_STEP_3_OPEN_SIDE_CLAMP;
     }
     yLimiter.jogPosition(-downSpeed * yLimiter.getTimeInterval());
     return CURRENT_STATE;
 }
 
-state state_tp_step_3_peel()
+state state_tp_step_3_open_side_clamp()
+{
+    if (did_state_change) {
+        // open the clamp on the side of the page that's being turned
+        DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(clampOpenAngle) : rightClamp.setAngleSmoothed(clampOpenAngle);
+    }
+    if ((DIRECTION == BACKWARD && leftClamp.isPosAtTarget()) || (DIRECTION == FORWARD && rightClamp.isPosAtTarget())) {
+        return TP_STEP_4_PEEL;
+    }
+    return CURRENT_STATE;
+}
+
+state state_tp_step_4_peel()
 {
     if (did_state_change) {
         fc.forceControllerSetup(0, 0, 0, 0);
@@ -80,7 +92,7 @@ state state_tp_step_3_peel()
     if (xLimiter.isPosAtTarget()) {
         fc.forceControllerReset();
         xLimiter.resetVelLimitToOriginal();
-        return TP_STEP_4_LIFT;
+        return TP_STEP_5_LIFT;
     }
     // [TODO] make sure y position changes with respect to force being applied (keep force constant) follow angle of book
     double changeInY = fc.forceControllerUpdate(Fx);
@@ -88,7 +100,7 @@ state state_tp_step_3_peel()
     return CURRENT_STATE;
 }
 
-state state_tp_step_4_lift()
+state state_tp_step_5_lift()
 {
     if (did_state_change) {
         yLimiter.setTarget(yLimiter.getPosition() + liftHeight);
@@ -96,57 +108,67 @@ state state_tp_step_4_lift()
     }
     // [TODO] try different paths for movement
     if (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget()) {
-        return TP_STEP_5a_SWEEP;
+        return TP_STEP_6_CLOSE_SIDE_CLAMP;
     }
     return CURRENT_STATE;
 }
 
-state state_tp_step_5a_sweep()
+// TODO
+state state_tp_step_6_close_side_clamp()
 {
     if (did_state_change) {
-        sweeper.setAngleSmoothed(85);
+        // close side clamp and open center clamp
+        DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(clampClosedAngle) : rightClamp.setAngleSmoothed(clampClosedAngle);
+        centerClamp.setAngleSmoothed(85);
+    }
+    if (((DIRECTION == BACKWARD && leftClamp.isPosAtTarget()) || (DIRECTION == FORWARD && rightClamp.isPosAtTarget())) && (centerClamp.isPosAtTarget())) {
+        return TP_STEP_7a_SWEEP;
+    }
+    return CURRENT_STATE;
+}
+
+state state_tp_step_7a_sweep()
+{
+    if (did_state_change) {
+        sweeper.setAngleSmoothed(clampOpenAngle);
     }
     if (sweeper.isPosAtTarget()) {
-        return TP_STEP_5b_SWEEP;
+        return TP_STEP_7b_SWEEP;
     }
     return CURRENT_STATE;
 }
 
-state state_tp_step_5b_sweep()
+state state_tp_step_7b_sweep()
 {
     if (did_state_change) {
-        sweeper.setAngleSmoothed(-90);
+        sweeper.setAngleSmoothed(clampClosedAngle);
     }
     if (sweeper.isPosAtTarget()) {
-        return TP_STEP_6a_CLAMP;
+        return TP_STEP_8_OPEN_SIDE_CLAMP;
     }
     return CURRENT_STATE;
 }
 
-state state_tp_step_6a_clamp()
+state state_tp_step_8_open_side_clamp()
 {
     if (did_state_change) {
-        DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(85) : rightClamp.setAngleSmoothed(85);
+        // open clamp on newly turned page side and close center clamp
+        DIRECTION == BACKWARD ? rightClamp.setAngleSmoothed(clampOpenAngle) : leftClamp.setAngleSmoothed(clampOpenAngle);
+        centerClamp.setAngleSmoothed(clampClosedAngle);
     }
-    if (DIRECTION == BACKWARD && leftClamp.isPosAtTarget()) {
-        return TP_STEP_6b_CLAMP;
-    }
-    if (DIRECTION == FORWARD && rightClamp.isPosAtTarget()) {
-        return TP_STEP_6b_CLAMP;
+    if (((DIRECTION == BACKWARD && rightClamp.isPosAtTarget()) || (DIRECTION == FORWARD && leftClamp.isPosAtTarget())) && (centerClamp.isPosAtTarget())) {
+        return TP_STEP_9_CLOSE_SIDE_CLAMP;
     }
     return CURRENT_STATE;
 }
 
-state state_tp_step_6b_clamp()
+state state_tp_step_9_close_side_clamp()
 {
     if (did_state_change) {
-        DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(-90) : rightClamp.setAngleSmoothed(-90);
+        DIRECTION == BACKWARD ? rightClamp.setAngleSmoothed(clampClosedAngle) : leftClamp.setAngleSmoothed(clampClosedAngle);
     }
-    if (DIRECTION == BACKWARD && leftClamp.isPosAtTarget()) {
-        return TP_STEP_7_CLEANUP;
-    }
-    if (DIRECTION == FORWARD && rightClamp.isPosAtTarget()) {
-        return TP_STEP_7_CLEANUP;
+    if ((DIRECTION == BACKWARD && rightClamp.isPosAtTarget()) || (DIRECTION == FORWARD && leftClamp.isPosAtTarget())) {
+        return TP_STEP_10_CLEANUP;
     }
     return CURRENT_STATE;
 }
@@ -154,5 +176,5 @@ state state_tp_step_6b_clamp()
 state state_tp_step_7_cleanup()
 {
     if (did_state_change) { }
-    return IDLE;
+    return TP_STEP_10_CLEANUP;
 }

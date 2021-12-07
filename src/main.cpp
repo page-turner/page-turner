@@ -26,6 +26,8 @@ JMotorDriverEsp32Servo leftClampDriver = JMotorDriverEsp32Servo(11, 14); //pwm c
 JServoController leftClamp = JServoController(leftClampDriver);
 JMotorDriverEsp32Servo rightClampDriver = JMotorDriverEsp32Servo(12, 27); //pwm channel, pin
 JServoController rightClamp = JServoController(rightClampDriver);
+JMotorDriverEsp32Servo centerClampDriver = JMotorDriverEsp32Servo(13, 28); //pwm channel, pin
+JServoController centerClamp = JServoController(centerClampDriver);
 
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
@@ -76,6 +78,8 @@ float peelTime = 2; //how long peel motion should take
 float liftHeight = 7; //how far to lift up after peeling up a single page
 float liftX = 9; //how far to move in after peeling up a single page
 float downSpeed = 1; // what speed to move arm towards page at
+float clampOpenAngle = 1; // angle to open the 3 clamps at
+float clampClosedAngle = 0; // angle to close the 3 clamps at, also the resting position
 
 //direction to turn the page (BACKWARD makes page move right, FORWARD makes the page move left)
 typedef enum {
@@ -86,18 +90,20 @@ direction DIRECTION = FORWARD;
 
 //list of states for state machine
 typedef enum {
-    START = 0,
-    IDLE = 1,
-    TP_SETUP = 2,
-    TP_STEP_1_BEGIN = 3,
-    TP_STEP_2_DOWN = 4,
-    TP_STEP_3_PEEL = 5,
-    TP_STEP_4_LIFT = 6,
-    TP_STEP_5a_SWEEP = 7,
-    TP_STEP_5b_SWEEP = 8,
-    TP_STEP_6a_CLAMP = 9,
-    TP_STEP_6b_CLAMP = 10,
-    TP_STEP_7_CLEANUP = 11,
+    START,
+    IDLE,
+    TP_SETUP,
+    TP_STEP_1_BEGIN,
+    TP_STEP_2_DOWN,
+    TP_STEP_3_OPEN_SIDE_CLAMP,
+    TP_STEP_4_PEEL,
+    TP_STEP_5_LIFT,
+    TP_STEP_6_CLOSE_SIDE_CLAMP,
+    TP_STEP_7a_SWEEP,
+    TP_STEP_7b_SWEEP,
+    TP_STEP_8_OPEN_SIDE_CLAMP,
+    TP_STEP_9_CLOSE_SIDE_CLAMP,
+    TP_STEP_10_CLEANUP,
 } state;
 state PREVIOUS_STATE = START;
 state CURRENT_STATE = IDLE;
@@ -156,12 +162,16 @@ void setup()
     sweeper.setAngleImmediate(0);
 
     leftClamp.setServoRangeValues(550, 1600);
-    leftClamp.setSetAngles(-90, 90);
-    leftClamp.setAngleLimits(90, -90);
+    leftClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
+    leftClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
 
     rightClamp.setServoRangeValues(550, 1600);
-    rightClamp.setSetAngles(-90, 90);
-    rightClamp.setAngleLimits(90, -90);
+    rightClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
+    rightClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
+
+    centerClamp.setServoRangeValues(550, 1600);
+    centerClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
+    centerClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
 
     //torque load cells
     torque1Sensor.begin(torque1SensorDTPin, torque1SensorSCKPin); //hx711 DT, SCK
@@ -188,7 +198,8 @@ void run_state()
     if (did_state_change) {
         millis_when_state_changed = millis();
         millis_since_last_state_update = 0;
-    } else {
+    }
+    else {
         millis_since_last_state_update = millis() - millis_when_state_changed;
     }
     state NEXT_STATE = CURRENT_STATE;
@@ -205,23 +216,28 @@ void run_state()
     case TP_STEP_2_DOWN:
         NEXT_STATE = state_tp_step_2_down();
         break;
-    case TP_STEP_3_PEEL:
-        NEXT_STATE = state_tp_step_3_peel();
+    case TP_STEP_3_OPEN_SIDE_CLAMP:
+        NEXT_STATE = state_tp_step_3_open_side_clamp();
+    case TP_STEP_4_PEEL:
+        NEXT_STATE = state_tp_step_4_peel();
         break;
-    case TP_STEP_4_LIFT:
-        NEXT_STATE = state_tp_step_4_lift();
+    case TP_STEP_5_LIFT:
+        NEXT_STATE = state_tp_step_5_lift();
         break;
-    case TP_STEP_5a_SWEEP:
-        NEXT_STATE = state_tp_step_5a_sweep();
+    case TP_STEP_6_CLOSE_SIDE_CLAMP:
+        NEXT_STATE = state_tp_step_6_close_side_clamp();
         break;
-    case TP_STEP_5b_SWEEP:
-        NEXT_STATE = state_tp_step_5b_sweep();
+    case TP_STEP_7a_SWEEP:
+        NEXT_STATE = state_tp_step_7a_sweep();
         break;
-    case TP_STEP_6a_CLAMP:
-        NEXT_STATE = state_tp_step_6a_clamp();
+    case TP_STEP_7b_SWEEP:
+        NEXT_STATE = state_tp_step_7b_sweep();
         break;
-    case TP_STEP_6b_CLAMP:
-        NEXT_STATE = state_tp_step_6b_clamp();
+    case TP_STEP_8_OPEN_SIDE_CLAMP:
+        NEXT_STATE = state_tp_step_8_open_side_clamp();
+        break;
+    case TP_STEP_9_CLOSE_SIDE_CLAMP:
+        NEXT_STATE = state_tp_step_9_close_side_clamp();
         break;
     default:
         break;
