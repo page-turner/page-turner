@@ -23,10 +23,13 @@ void tareTorques()
   */
 state state_idle()
 {
-    // xLimiter.setTarget(xTarg);
-    // yLimiter.setTarget(yTarg);
-    xLimiter.setTarget(0);
-    yLimiter.setTarget(length_arm_1 + length_arm_2);
+    if (enabled) {
+        xLimiter.setTarget(xTarg);
+        yLimiter.setTarget(yTarg);
+    } else {
+        xLimiter.setTarget(0);
+        yLimiter.setTarget(length_arm_1 + length_arm_2);
+    }
 
     bool enab = !(armAtTarget() && abs(motor1Controller.getPos() - theta1) < 5 && abs(motor2Controller.getPos() - theta2) < 5
         && abs(motor1Controller.getVel()) < 5 && abs(motor2Controller.getVel()) < 5);
