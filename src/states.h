@@ -1,7 +1,8 @@
 /**
  * @brief  states.h contains functions for each state the pageturner can be in
- * Each state function should return CURRENT_STATE to get run again, or can switch to a different state by returning that state's value.
- * did_state_change: (bool) true if the state just changed
+ * Each state function should return CURRENT_STATE to get run again, or can switch to a different state by returning that state's value
+ * The idea is that a state will always return CURRENT_STATE until a condition to transition to a new state has been met
+ * did_state_change: (bool) true if the state just changed, useful for code that needs to be run just once in a given state
  * millis_since_last_state_update: (unsigned long) how many milliseconds has the current state been running for. 0 if state just changed
  */
 #include <Arduino.h>
@@ -32,7 +33,9 @@ state state_idle()
     return CURRENT_STATE;
 }
 
-/* STATES ARE IN PROGRESS AND NEED TO BE TESTED*/
+/**
+  * @brief  Begin the process to turn a page, set up variables
+  */
 state state_tp_setup()
 {
     if (did_state_change) {
@@ -44,9 +47,11 @@ state state_tp_setup()
     return TP_STEP_1_BEGIN;
 }
 
+/**
+  * @brief  move the arm to above the page to be turned, wait until the arm has reached it's target position
+  */
 state state_tp_step_1_begin()
 {
-    //go and hover above edge of book
     if (did_state_change) {
         xLimiter.setTarget(hoverX * DIRECTION);
         yLimiter.setTarget(hoverY);
@@ -56,8 +61,11 @@ state state_tp_step_1_begin()
     }
     return CURRENT_STATE;
 }
-//move down, then tare the torque
-state state_tp_step_2A_down()
+
+/**
+  * @brief  slowly move the arm down towards the page, wait until target position has reached
+  */
+state state_tp_step_2a_down()
 {
     if (y < hoverY - DIST_DOWN_BEFORE_TARE) {
         tareTorques();
@@ -67,8 +75,11 @@ state state_tp_step_2A_down()
     yLimiter.jogPosition(-downSpeed * yLimiter.getTimeInterval());
     return CURRENT_STATE;
 }
-//move down until force or min_y reached
-state state_tp_step_2B_down()
+
+/**
+  * @brief  continue to slowly move the arm down towards the page, wait until the force target has been reached, implying that the arm is in contact with the book
+  */
+state state_tp_step_2b_down()
 {
     if (did_state_change) {
         Fx = 0;
@@ -82,6 +93,9 @@ state state_tp_step_2B_down()
     return CURRENT_STATE;
 }
 
+/**
+  * @brief  open the clamp on the side of the page being turned, 
+  */
 state state_tp_step_3_open_side_clamp()
 {
     if (did_state_change) {
@@ -94,6 +108,9 @@ state state_tp_step_3_open_side_clamp()
     return CURRENT_STATE;
 }
 
+/**
+  * @brief  move the arm along the page, wait until target position has been reached
+  */
 state state_tp_step_4_peel()
 {
     if (did_state_change) {
@@ -111,6 +128,9 @@ state state_tp_step_4_peel()
     return CURRENT_STATE;
 }
 
+/**
+  * @brief  move the arm up and lift the page, wait until target position has been reached
+  */
 state state_tp_step_5_lift()
 {
     if (did_state_change) {
@@ -124,6 +144,9 @@ state state_tp_step_5_lift()
     return CURRENT_STATE;
 }
 
+/**
+  * @brief  close the side clamp and open the center clamp, wait for .2 seconds (approximately how long it takes for the clamp servos to complete their motion)
+  */
 state state_tp_step_6_close_side_clamp()
 {
     if (did_state_change) {
@@ -137,10 +160,13 @@ state state_tp_step_6_close_side_clamp()
     return CURRENT_STATE;
 }
 
+/**
+  * @brief  move the sweep servo from one side to the other, wait until target position has been reached
+  */
 state state_tp_step_7a_sweep()
 {
     if (did_state_change) {
-        sweeper.setAngleSmoothed(85);
+        sweeper.setAngleSmoothed(85 );
     }
     if (sweeper.isPosAtTarget()) {
         return TP_STEP_7b_SWEEP;
@@ -148,6 +174,9 @@ state state_tp_step_7a_sweep()
     return CURRENT_STATE;
 }
 
+/**
+  * @brief  move the sweep servo back to the original position, wait until target position has been reached
+  */
 state state_tp_step_7b_sweep()
 {
     if (did_state_change) {
@@ -159,6 +188,9 @@ state state_tp_step_7b_sweep()
     return CURRENT_STATE;
 }
 
+/**
+  * @brief  open the clamp on the side of the page that has been swept and close the center clamp, wait 1.5 seconds 
+  */
 state state_tp_step_8_open_side_clamp()
 {
     if (did_state_change) {
@@ -172,6 +204,9 @@ state state_tp_step_8_open_side_clamp()
     return CURRENT_STATE;
 }
 
+/**
+  * @brief  close the side clamp, wait .2 seconds
+  */
 state state_tp_step_9_close_side_clamp()
 {
     if (did_state_change) {
@@ -183,8 +218,10 @@ state state_tp_step_9_close_side_clamp()
     return CURRENT_STATE;
 }
 
+/**
+  * @brief  unused state
+  */
 state state_tp_step_10_cleanup()
 {
-    // if (did_state_change) { }
     return IDLE;
 }

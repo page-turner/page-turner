@@ -8,9 +8,10 @@
 #include <Derivs_Limiter.h>
 #include <ESP32_easy_wifi_data.h>
 #include <JMotor.h>
+#include "states.h"
 
-//documentation for JMotor library here: https://joshua-8.github.io/JMotor/hierarchy.html
-
+// Controller Libraries to abstract the interaction of servos and motors
+// Documentation for JMotor library here: https://joshua-8.github.io/JMotor/hierarchy.html
 JMotorDriverEsp32Servo sweeperDriver = JMotorDriverEsp32Servo(10, 26); //pwm channel, pin
 JServoController sweeper = JServoController(sweeperDriver);
 JMotorDriverEsp32Servo leftClampDriver = JMotorDriverEsp32Servo(11, 14); //pwm channel, pin
@@ -210,9 +211,11 @@ void setup()
     yLimiter.setPosition(length_arm_1 + length_arm_2);
 }
 
-#include "states.h"
 /**
  * @brief  state machine framework, add state functions to states.h, and call them from here
+ * Diagram of the state machine available here: https://docs.google.com/drawings/d/e/2PACX-1vSXIanYaCZT8zV0G8m5wtqqAXXVGU7EXHymEftb0oeUDFG-PJwq8bg7bHy57mrLzCQ-i5nggW-QJ09F/pub?w=894&h=1700
+ * The state machine is such that the robot is only in one state at a time, and each state is a step in turning a page (eg. moving the arm above the page, peeling the page, lifting the page, etc.)
+ * The intention is to break down the actions and steps of the robot to make testing and iteration easier.
  */
 void run_state()
 {
@@ -235,10 +238,10 @@ void run_state()
         NEXT_STATE = state_tp_step_1_begin();
         break;
     case TP_STEP_2A_DOWN:
-        NEXT_STATE = state_tp_step_2A_down();
+        NEXT_STATE = state_tp_step_2a_down();
         break;
     case TP_STEP_2B_DOWN:
-        NEXT_STATE = state_tp_step_2B_down();
+        NEXT_STATE = state_tp_step_2b_down();
         break;
     case TP_STEP_3_OPEN_SIDE_CLAMP:
         NEXT_STATE = state_tp_step_3_open_side_clamp();
