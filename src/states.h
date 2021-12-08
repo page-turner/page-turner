@@ -63,7 +63,7 @@ state state_tp_step_1_begin()
 }
 
 /**
-  * @brief  slowly move the arm down towards the page, wait until target position has reached
+  * @brief  slowly move the arm down towards the page, wait until target position has reached, allow arm movement to smooth down before turning sensing on
   */
 state state_tp_step_2a_down()
 {

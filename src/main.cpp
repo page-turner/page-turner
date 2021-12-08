@@ -8,7 +8,6 @@
 #include <Derivs_Limiter.h>
 #include <ESP32_easy_wifi_data.h>
 #include <JMotor.h>
-#include "states.h"
 
 // Controller Libraries to abstract the interaction of servos and motors
 // Documentation for JMotor library here: https://joshua-8.github.io/JMotor/hierarchy.html
@@ -127,6 +126,7 @@ typedef enum {
 } state;
 state PREVIOUS_STATE = START;
 state CURRENT_STATE = IDLE;
+#include "states.h"
 
 //for debug, receive and send data over wifi
 void WifiDataToParse()
