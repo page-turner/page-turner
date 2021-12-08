@@ -11,13 +11,20 @@
 
 //documentation for JMotor library here: https://joshua-8.github.io/JMotor/hierarchy.html
 
-JMotorDriverEsp32Servo servoSweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
-JServoController sweeper = JServoController(servoSweeperDriver);
+
+JMotorDriverEsp32Servo sweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
+JServoController sweeper = JServoController(sweeperDriver);
+JMotorDriverEsp32Servo leftClampDriver = JMotorDriverEsp32Servo(11, 14); //pwm channel, pin
+JServoController leftClamp = JServoController(leftClampDriver);
+JMotorDriverEsp32Servo rightClampDriver = JMotorDriverEsp32Servo(12, 27); //pwm channel, pin
+JServoController rightClamp = JServoController(rightClampDriver);
+JMotorDriverEsp32Servo centerClampDriver = JMotorDriverEsp32Servo(13, 12); //pwm channel, pin
+JServoController centerClamp = JServoController(centerClampDriver);
 
 JVoltageCompConst motorVoltageComp = JVoltageCompConst(5);
 
 JMotorDriverEsp32L293 motor1Driver = JMotorDriverEsp32L293(3, 19, 18, 5); //pdw channel, enable, dirA, dirB
-JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(false, 360.0 * 34 / 25, 64, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
+JEncoderAS5048bI2C encoder1 = JEncoderAS5048bI2C(true, 360.0 * 34 / 25, 64, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
 JMotorCompStandardConfig motor1CompConfig = JMotorCompStandardConfig(2.45, 16.5, 2.8, 25, 5, 70, 50);
 JMotorCompStandard motor1Compensator = JMotorCompStandard(motorVoltageComp, motor1CompConfig);
 JControlLoopBasic motor1ControlLoop = JControlLoopBasic(/*P*/ 20);
@@ -25,7 +32,7 @@ JMotorControllerClosed motor1Controller
     = JMotorControllerClosed(motor1Driver, motor1Compensator, encoder1, motor1ControlLoop, 60, 80, 5, false, 2); //velLimit, accelLimit, distFromSetpointLimit, preventGoingWrongWay, maxStoppingAccel
 
 JMotorDriverEsp32L293 motor2Driver = JMotorDriverEsp32L293(2, 4, 16, 17); //pdw channel, enable, dirA, dirB
-JEncoderAS5048bI2C encoder2 = JEncoderAS5048bI2C(false, 360.0 * 27 / 25, 68, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
+JEncoderAS5048bI2C encoder2 = JEncoderAS5048bI2C(true, 360.0 * 27 / 25, 68, 200000, 100, true); //reverse, distPerCountFactor, address, velEnoughTime, velEnoughTicks, recognizeOutOfRange
 JMotorCompStandardConfig motor2CompConfig = JMotorCompStandardConfig(3.3, 15, 3.45, 15, 5, 92, 50);
 JMotorCompStandard motor2Compensator = JMotorCompStandard(motorVoltageComp, motor2CompConfig);
 JControlLoopBasic motor2ControlLoop = JControlLoopBasic(/*P*/ 20);
@@ -90,6 +97,8 @@ float liftHeight = 15; //how far to lift up after peeling up a single page
 float liftX = 9; //how far to move in after peeling up a single page
 float downSpeed = 3; // what speed to move arm towards page at
 float DIST_DOWN_BEFORE_TARE = 5; //how far to go down before tareing and enabling sensing (this distance allows the torque measurements to stabilize)
+float clampOpenAngle = 1; // angle to open the 3 clamps at
+float clampClosedAngle = 0; // angle to close the 3 clamps at, also the resting position
 
 //direction to turn the page (BACKWARD makes page move right, FORWARD makes the page move left)
 typedef enum {
@@ -106,12 +115,15 @@ typedef enum {
     TP_STEP_1_BEGIN,
     TP_STEP_2A_DOWN,
     TP_STEP_2B_DOWN,
-    TP_STEP_3_PEEL,
-    TP_STEP_4_LIFT,
-    TP_STEP_5a_SWEEP,
-    TP_STEP_5b_SWEEP,
-    TP_STEP_6_CLAMP,
-    TP_STEP_7_CLEANUP,
+    TP_STEP_3_OPEN_SIDE_CLAMP,
+    TP_STEP_4_PEEL,
+    TP_STEP_5_LIFT,
+    TP_STEP_6_CLOSE_SIDE_CLAMP,
+    TP_STEP_7a_SWEEP,
+    TP_STEP_7b_SWEEP,
+    TP_STEP_8_OPEN_SIDE_CLAMP,
+    TP_STEP_9_CLOSE_SIDE_CLAMP,
+    TP_STEP_10_CLEANUP,
 } state;
 state PREVIOUS_STATE = START;
 state CURRENT_STATE = IDLE;
@@ -148,13 +160,13 @@ void setup()
     Serial.begin(115200);
     Serial.println("---starting---");
 
-    motor1Driver.reverse = false;
+    motor1Driver.reverse = true;
     motor1Driver.pwmDriver.setFrequencyAndResolution(5000);
     motor1Driver.enable();
     motor1Driver.set(0); //make sure motor isn't turning
     motor1Driver.disable();
 
-    motor2Driver.reverse = true;
+    motor2Driver.reverse = false;
     motor2Driver.pwmDriver.setFrequencyAndResolution(5000);
     motor2Driver.enable();
     motor2Driver.set(0); //make sure motor isn't turning
@@ -167,6 +179,22 @@ void setup()
     sweeper.setSetAngles(-45, 45);
     sweeper.setAngleLimits(-90, 90);
     sweeper.setAngleImmediate(0);
+
+    leftClamp.setServoRangeValues(550, 1600);
+    leftClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
+    leftClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
+    leftClamp.setAngleImmediate(clampClosedAngle);
+
+    rightClamp.setServoRangeValues(550, 1600);
+    rightClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
+    rightClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
+    rightClamp.setAngleImmediate(clampClosedAngle);
+
+    centerClamp.setServoRangeValues(550, 1600);
+    centerClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
+    centerClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
+    centerClamp.setAngleImmediate(clampClosedAngle);
+
 
     torque1Smoother.fillValue(0, torque1Smoother.getSize());
     torque2Smoother.fillValue(0, torque2Smoother.getSize());
@@ -214,17 +242,32 @@ void run_state()
     case TP_STEP_2B_DOWN:
         NEXT_STATE = state_tp_step_2B_down();
         break;
-    case TP_STEP_3_PEEL:
-        NEXT_STATE = state_tp_step_3_peel();
+    case TP_STEP_3_OPEN_SIDE_CLAMP:
+        NEXT_STATE = state_tp_step_3_open_side_clamp();
         break;
-    case TP_STEP_4_LIFT:
-        NEXT_STATE = state_tp_step_4_lift();
+    case TP_STEP_4_PEEL:
+        NEXT_STATE = state_tp_step_4_peel();
         break;
-    case TP_STEP_5a_SWEEP:
-        NEXT_STATE = state_tp_step_5a_sweep();
+    case TP_STEP_5_LIFT:
+        NEXT_STATE = state_tp_step_5_lift();
         break;
-    case TP_STEP_5b_SWEEP:
-        NEXT_STATE = state_tp_step_5b_sweep();
+    case TP_STEP_6_CLOSE_SIDE_CLAMP:
+        NEXT_STATE = state_tp_step_6_close_side_clamp();
+        break;
+    case TP_STEP_7a_SWEEP:
+        NEXT_STATE = state_tp_step_7a_sweep();
+        break;
+    case TP_STEP_7b_SWEEP:
+        NEXT_STATE = state_tp_step_7b_sweep();
+        break;
+    case TP_STEP_8_OPEN_SIDE_CLAMP:
+        NEXT_STATE = state_tp_step_8_open_side_clamp();
+        break;
+    case TP_STEP_9_CLOSE_SIDE_CLAMP:
+        NEXT_STATE = state_tp_step_9_close_side_clamp();
+        break;
+    case TP_STEP_10_CLEANUP:
+        NEXT_STATE = state_tp_step_10_cleanup();
         break;
     default:
         break;
@@ -240,6 +283,9 @@ void loop()
         enabled = false;
     }
     sweeper.setEnable(enabled);
+    leftClamp.setEnable(enabled);
+    rightClamp.setEnable(enabled);
+    centerClamp.setEnable(enabled);
     motor1Controller.setEnable(enabled);
     motor2Controller.setEnable(enabled);
 
@@ -265,5 +311,8 @@ void loop()
     motor1Controller.run();
     motor2Controller.run();
     sweeper.run();
+    leftClamp.run();
+    rightClamp.run();
+    centerClamp.run();
     delay(1);
 }
