@@ -23,13 +23,24 @@ void tareTorques()
   */
 state state_idle()
 {
-    if (go && enabled) { //for debug, wait for 'g' keypress from computer
-        tareTorques();
+    // xLimiter.setTarget(xTarg);
+    // yLimiter.setTarget(yTarg);
+    xLimiter.setTarget(0);
+    yLimiter.setTarget(length_arm_1 + length_arm_2);
+
+    bool enab = !(armAtTarget() && abs(motor1Controller.getPos() - theta1) < 5 && abs(motor2Controller.getPos() - theta2) < 5
+        && abs(motor1Controller.getVel()) < 5 && abs(motor2Controller.getVel()) < 5);
+
+    motor1Controller.setEnable(enab);
+    motor2Controller.setEnable(enab);
+    leftClamp.setEnable(enab);
+    rightClamp.setEnable(enab);
+    centerClamp.setEnable(enab);
+    sweeper.setEnable(enab);
+
+    if (go || digitalRead(BUTTON_PIN) == LOW) { //for debug, wait for 'g' keypress from computer
         return TP_SETUP;
     }
-    xLimiter.setTarget(xTarg); //for debug, manual control from wifi
-    yLimiter.setTarget(yTarg);
-
     return CURRENT_STATE;
 }
 
@@ -38,12 +49,16 @@ state state_idle()
   */
 state state_tp_setup()
 {
-    if (did_state_change) {
-        // reset variables (if any)
-        // DETERMINE WHICH DIRECTION TO GO IN
-        DIRECTION = FORWARD;
-        sweeper.setAngleSmoothed(DIRECTION);
-    }
+    motor1Controller.enable();
+    motor2Controller.enable();
+    leftClamp.enable();
+    rightClamp.enable();
+    centerClamp.enable();
+    sweeper.enable();
+    // reset variables (if any)
+    // DETERMINE WHICH DIRECTION TO GO IN
+    DIRECTION = FORWARD;
+    sweeper.setAngleSmoothed(DIRECTION);
     return TP_STEP_1_BEGIN;
 }
 
@@ -215,6 +230,21 @@ state state_tp_step_9_close_side_clamp()
     if (millis_since_last_state_update > 200) {
         return TP_STEP_10_CLEANUP;
     }
+    return CURRENT_STATE;
+}
+
+/**
+  * @brief  disable then lock and require reset, for use if error detected
+  */
+state state_error()
+{
+    sweeper.disable();
+    leftClamp.disable();
+    rightClamp.disable();
+    centerClamp.disable();
+    motor1Controller.disable();
+    motor2Controller.disable();
+    digitalWrite(BUILTIN_LED, (millis() % 500) < 250);
     return CURRENT_STATE;
 }
 

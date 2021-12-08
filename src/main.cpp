@@ -41,6 +41,9 @@ JMotorControllerClosed motor2Controller
 RunningAverage torque1Smoother = RunningAverage(150);
 RunningAverage torque2Smoother = RunningAverage(150);
 
+const byte BUILTIN_LED = 2;
+const byte BUTTON_PIN = 13;
+
 bool enabled = false; //received over wifi
 float xTarg = 0; //for debug, received over wifi
 float yTarg = 0; //for debug, received over wifi
@@ -123,12 +126,13 @@ typedef enum {
     TP_STEP_8_OPEN_SIDE_CLAMP,
     TP_STEP_9_CLOSE_SIDE_CLAMP,
     TP_STEP_10_CLEANUP,
+    ERROR
 } state;
 state PREVIOUS_STATE = START;
 state CURRENT_STATE = IDLE;
 #include "states.h"
 
-//for debug, receive and send data over wifi
+//TODO: DELETE, for debug, receive and send data over wifi
 void WifiDataToParse()
 {
     enabled = EWD::recvBl();
@@ -157,6 +161,9 @@ void WifiDataToSend()
 
 void setup()
 {
+    pinMode(BUILTIN_LED, OUTPUT);
+    digitalWrite(BUILTIN_LED, HIGH);
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
     Serial.begin(115200);
     Serial.println("---starting---");
 
@@ -173,11 +180,11 @@ void setup()
     motor2Driver.disable();
 
     //set up and calibrate servos
-    sweeper.setConstrainRange(false);
-    sweeper.setVelAccelLimits(.5, .5);
-    sweeper.setServoRangeValues(1000, 2000);
+    sweeper.setConstrainRange(true);
+    sweeper.setVelAccelLimits(1, 1);
+    sweeper.setServoRangeValues(530, 2400);
     sweeper.setSetAngles(BACKWARD, FORWARD);
-    sweeper.setAngleLimits(BACKWARD, FORWARD);
+    sweeper.setAngleLimits(FORWARD, BACKWARD);
     sweeper.setAngleImmediate(FORWARD);
 
     leftClamp.setServoRangeValues(550, 1600);
@@ -209,6 +216,7 @@ void setup()
     encoder2.setEncoderZero(encoder2Zero);
 
     yLimiter.setPosition(length_arm_1 + length_arm_2);
+    digitalWrite(BUILTIN_LED, LOW);
 }
 
 /**
@@ -270,6 +278,9 @@ void run_state()
     case TP_STEP_10_CLEANUP:
         NEXT_STATE = state_tp_step_10_cleanup();
         break;
+    case ERROR:
+        NEXT_STATE = state_error();
+        break;
     default:
         break;
     }
@@ -279,16 +290,21 @@ void run_state()
 
 void loop()
 {
+    //TODO: delete, for debug
     EWD::runWifiCommunication();
     if (EWD::timedOut()) {
-        enabled = false;
+        sweeper.disable();
+        leftClamp.disable();
+        rightClamp.disable();
+        centerClamp.disable();
+        motor1Controller.disable();
+        motor2Controller.disable();
     }
-    sweeper.setEnable(enabled);
-    leftClamp.setEnable(enabled);
-    rightClamp.setEnable(enabled);
-    centerClamp.setEnable(enabled);
-    motor1Controller.setEnable(enabled);
-    motor2Controller.setEnable(enabled);
+
+    //jump into error state if encoder doesn't sense magnet or gets disconnected
+    if (!encoder1.isMagnetInRange() || !encoder2.isMagnetInRange()) {
+        CURRENT_STATE = ERROR;
+    }
 
     torque1Smoother.addValue(torque1Calibration * motor1Controller.controlLoop.getCtrlLoopOut());
     torque1 = torque1Smoother.getAverage() - torque1Zero;
