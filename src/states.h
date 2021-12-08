@@ -42,7 +42,7 @@ state state_tp_setup()
         // reset variables (if any)
         // DETERMINE WHICH DIRECTION TO GO IN
         DIRECTION = FORWARD;
-        sweeper.setAngleSmoothed(-90);
+        sweeper.setAngleSmoothed(DIRECTION);
     }
     return TP_STEP_1_BEGIN;
 }
@@ -152,7 +152,7 @@ state state_tp_step_6_close_side_clamp()
     if (did_state_change) {
         // close side clamp and open center clamp
         DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(clampClosedAngle) : rightClamp.setAngleSmoothed(clampClosedAngle);
-        centerClamp.setAngleSmoothed(85);
+        centerClamp.setAngleSmoothed(clampOpenAngle);
     }
     if (millis_since_last_state_update > 200) {
         return TP_STEP_7a_SWEEP;
@@ -166,7 +166,7 @@ state state_tp_step_6_close_side_clamp()
 state state_tp_step_7a_sweep()
 {
     if (did_state_change) {
-        sweeper.setAngleSmoothed(85 );
+        sweeper.setAngleSmoothed(DIRECTION * -1);
     }
     if (sweeper.isPosAtTarget()) {
         return TP_STEP_7b_SWEEP;
@@ -180,7 +180,7 @@ state state_tp_step_7a_sweep()
 state state_tp_step_7b_sweep()
 {
     if (did_state_change) {
-        sweeper.setAngleSmoothed(-90);
+        sweeper.setAngleSmoothed(DIRECTION);
     }
     if (sweeper.isPosAtTarget()) {
         return TP_STEP_8_OPEN_SIDE_CLAMP;

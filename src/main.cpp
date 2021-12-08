@@ -174,11 +174,11 @@ void setup()
 
     //set up and calibrate servos
     sweeper.setConstrainRange(false);
-    sweeper.setVelAccelLimits(180, 180);
+    sweeper.setVelAccelLimits(.5, .5);
     sweeper.setServoRangeValues(1000, 2000);
-    sweeper.setSetAngles(-45, 45);
-    sweeper.setAngleLimits(-90, 90);
-    sweeper.setAngleImmediate(0);
+    sweeper.setSetAngles(BACKWARD, FORWARD);
+    sweeper.setAngleLimits(BACKWARD, FORWARD);
+    sweeper.setAngleImmediate(FORWARD);
 
     leftClamp.setServoRangeValues(550, 1600);
     leftClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
