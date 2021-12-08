@@ -11,8 +11,7 @@
 
 //documentation for JMotor library here: https://joshua-8.github.io/JMotor/hierarchy.html
 
-
-JMotorDriverEsp32Servo sweeperDriver = JMotorDriverEsp32Servo(10, 33); //pwm channel, pin
+JMotorDriverEsp32Servo sweeperDriver = JMotorDriverEsp32Servo(10, 26); //pwm channel, pin
 JServoController sweeper = JServoController(sweeperDriver);
 JMotorDriverEsp32Servo leftClampDriver = JMotorDriverEsp32Servo(11, 14); //pwm channel, pin
 JServoController leftClamp = JServoController(leftClampDriver);
@@ -194,7 +193,6 @@ void setup()
     centerClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
     centerClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
     centerClamp.setAngleImmediate(clampClosedAngle);
-
 
     torque1Smoother.fillValue(0, torque1Smoother.getSize());
     torque2Smoother.fillValue(0, torque2Smoother.getSize());
