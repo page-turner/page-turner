@@ -8,7 +8,12 @@
 
 bool armAtTarget()
 {
-    return (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget() /* && servo1.isPosAtTarget() && servo2.isPosAtTarget()*/);
+    return (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget() && motor1Controller.posSetpointSmoother.isPosAtTarget() && motor2Controller.posSetpointSmoother.isPosAtTarget());
+}
+void tareTorques()
+{
+    torque1Zero = torque1Smoother.getAverage();
+    torque2Zero = torque2Smoother.getAverage();
 }
 
 /**
@@ -17,6 +22,7 @@ bool armAtTarget()
 state state_idle()
 {
     if (go && enabled) { //for debug, wait for 'g' keypress from computer
+        tareTorques();
         return TP_SETUP;
     }
     xLimiter.setTarget(xTarg); //for debug, manual control from wifi
@@ -32,7 +38,7 @@ state state_tp_setup()
         // reset variables (if any)
         // DETERMINE WHICH DIRECTION TO GO IN
         DIRECTION = FORWARD;
-        servoSweeper.setAngleSmoothed(-90);
+        sweeper.setAngleSmoothed(-90);
     }
     return TP_STEP_1_BEGIN;
 }
@@ -42,31 +48,35 @@ state state_tp_step_1_begin()
     //go and hover above edge of book
     if (did_state_change) {
         xLimiter.setTarget(hoverX * DIRECTION);
-    }
-    //TODO: FOLLOW ARC INSTEAD??
-    if (xLimiter.isPosAtTarget()) {
         yLimiter.setTarget(hoverY);
     }
     if (armAtTarget()) {
-        return TP_STEP_2_DOWN;
+        return TP_STEP_2A_DOWN;
     }
     return CURRENT_STATE;
 }
-
-state state_tp_step_2_down()
+//move down, then tare the torque
+state state_tp_step_2A_down()
+{
+    if (y < hoverY - DIST_DOWN_BEFORE_TARE) {
+        tareTorques();
+        return TP_STEP_2B_DOWN;
+    }
+    // tell servos to go down slowly
+    yLimiter.jogPosition(-downSpeed * yLimiter.getTimeInterval());
+    return CURRENT_STATE;
+}
+//move down until force or min_y reached
+state state_tp_step_2B_down()
 {
     if (did_state_change) {
-        // torque1Sensor.tare(3);
-        // torque2Sensor.tare(3);
         Fx = 0;
         Fy = 0;
-        xLimiter.resetTime();
-        yLimiter.resetTime();
-        // tell servos to go down slowly
     }
-    if (Fy < targetForceY) {
+    if (Fy < targetForceY || y <= MIN_Y) {
         return TP_STEP_3_PEEL;
     }
+    // tell servos to go down slowly
     yLimiter.jogPosition(-downSpeed * yLimiter.getTimeInterval());
     return CURRENT_STATE;
 }
@@ -104,9 +114,9 @@ state state_tp_step_4_lift()
 state state_tp_step_5a_sweep()
 {
     if (did_state_change) {
-        servoSweeper.setAngleSmoothed(85);
+        sweeper.setAngleSmoothed(85);
     }
-    if (servoSweeper.isPosAtTarget()) {
+    if (sweeper.isPosAtTarget()) {
         return TP_STEP_5b_SWEEP;
     }
     return CURRENT_STATE;
@@ -115,9 +125,9 @@ state state_tp_step_5a_sweep()
 state state_tp_step_5b_sweep()
 {
     if (did_state_change) {
-        servoSweeper.setAngleSmoothed(-90);
+        sweeper.setAngleSmoothed(-90);
     }
-    if (servoSweeper.isPosAtTarget()) {
+    if (sweeper.isPosAtTarget()) {
         return IDLE; // change later to TP_STEP_6_CLAMP
     }
     return CURRENT_STATE;
