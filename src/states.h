@@ -36,10 +36,10 @@ state state_idle()
 
     motor1Controller.setEnable(enab);
     motor2Controller.setEnable(enab);
-    leftClamp.setEnable(enab);
-    rightClamp.setEnable(enab);
-    centerClamp.setEnable(enab);
-    sweeper.setEnable(enab);
+    leftClamp.disable();
+    rightClamp.disable();
+    centerClamp.disable();
+    sweeper.disable();
 
     if (go || digitalRead(BUTTON_PIN) == LOW) { //for debug, wait for 'g' keypress from computer
         return TP_SETUP;

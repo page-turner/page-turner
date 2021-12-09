@@ -64,7 +64,7 @@ float y = 0;
 float theta1 = 0;
 float theta2 = 0;
 //arm constants
-const float MIN_Y = 0; // if book not detected while arm going down, continue to next step anyways if y goes below this value
+const float MIN_Y = 9; // if book not detected while arm going down, continue to next step anyways if y goes below this value
 const float length_arm_1 = 14; // in cm
 const float length_arm_2 = 13; // in cm
 const float theta1Min = -55;
@@ -90,15 +90,15 @@ Derivs_Limiter yLimiter = Derivs_Limiter(8, 6);
 forceController fc = forceController();
 
 //SETTINGS relevant to the book being used
-float hoverX = 14; // coordinate to move the servo arm (x direction) when beginning turn page routine
-float hoverY = 18; // coordinate to move the servo arm (y direction) when beginning turn page routine
+float hoverX = 18; // coordinate to move the servo arm (x direction) when beginning turn page routine
+float hoverY = 19.5; // coordinate to move the servo arm (y direction) when beginning turn page routine
 float targetForceY = -.9; // how much force (y direction) is being applied on the book
 float peelDist = 1; //how far to move tape wheel along book
 float peelTime = 2; //how long peel motion should take
 float liftHeight = 15; //how far to lift up after peeling up a single page
 float liftX = 9; //how far to move in after peeling up a single page
 float downSpeed = 3; // what speed to move arm towards page at
-float DIST_DOWN_BEFORE_TARE = 5; //how far to go down before tareing and enabling sensing (this distance allows the torque measurements to stabilize)
+float DIST_DOWN_BEFORE_TARE = 4; //how far to go down before tareing and enabling sensing (this distance allows the torque measurements to stabilize)
 float clampOpenAngle = 1; // angle to open the 3 clamps at
 float clampClosedAngle = 0; // angle to close the 3 clamps at, also the resting position
 
@@ -292,14 +292,6 @@ void loop()
 {
     //TODO: delete, for debug
     EWD::runWifiCommunication();
-    if (EWD::timedOut()) {
-        sweeper.disable();
-        leftClamp.disable();
-        rightClamp.disable();
-        centerClamp.disable();
-        motor1Controller.disable();
-        motor2Controller.disable();
-    }
 
     //jump into error state if encoder doesn't sense magnet or gets disconnected
     if (!encoder1.isMagnetInRange() || !encoder2.isMagnetInRange()) {
