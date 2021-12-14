@@ -1,15 +1,15 @@
 #define EWDmaxWifiSendBufSize 100
 #define EWDmaxWifiRecvBufSize 100
 
-#include "RunningAverage.h"
 #include "TwoAxisArmKinematics.h"
 #include "forceController.h"
 #include <Arduino.h>
 #include <Derivs_Limiter.h>
 #include <ESP32_easy_wifi_data.h>
 #include <JMotor.h>
+#include <RunningAverage.h>
 
-// Controller Libraries to abstract the interaction of servos and motors
+// Set up controllers for servos and motors, using classes from the JMotor library
 // Documentation for JMotor library here: https://joshua-8.github.io/JMotor/hierarchy.html
 JMotorDriverEsp32Servo sweeperDriver = JMotorDriverEsp32Servo(10, 26); //pwm channel, pin
 JServoController sweeper = JServoController(sweeperDriver);
@@ -310,8 +310,8 @@ void loop()
     y = yLimiter.calc();
     //calculate arm kinematics (by having this separate outside the state machine, states can't directly set servo angles)
     if (cartToAngles(x, y, theta1, theta2, ARM_SETTINGS)) {
-        motor1Controller.setPosTarget(theta1);
-        motor2Controller.setPosTarget(theta2 + theta1);
+        motor1Controller.setPosTargetStallable(theta1);
+        motor2Controller.setPosTargetStallable(theta2 + theta1);
     }
 
     torqueToForces(theta1, theta2, torque1, torque2, Fx, Fy, length_arm_1, length_arm_2, x, y);
