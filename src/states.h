@@ -62,7 +62,11 @@ state state_tp_setup()
     // DETERMINE WHICH DIRECTION TO GO IN
     DIRECTION = FORWARD;
     sweeper.setAngleSmoothed(DIRECTION);
-    return TP_STEP_1_BEGIN;
+    if (sweeper.isPosAtTarget()) {
+        sweeper.disable();
+        return TP_STEP_1_BEGIN;
+    }
+    return CURRENT_STATE;
 }
 
 /**
@@ -132,17 +136,14 @@ state state_tp_step_3_open_side_clamp()
 state state_tp_step_4_peel()
 {
     if (did_state_change) {
-        fc.forceControllerSetup(0, 0, 0, 0);
         xLimiter.setTargetTimedMovePreferred(xLimiter.getPosition() - peelDist * DIRECTION, peelTime);
     }
     if (xLimiter.isPosAtTarget()) {
-        fc.forceControllerReset();
         xLimiter.resetVelLimitToOriginal();
         return TP_STEP_5_LIFT;
     }
-    // [TODO] make sure y position changes with respect to force being applied (keep force constant) follow angle of book
-    double changeInY = fc.forceControllerUpdate(Fx);
-    yLimiter.setTarget(yLimiter.getPosition() + changeInY);
+    // [TODO] make sure y position changes with respect to force being applied (keep force constant) follow angle of book?
+    yLimiter.setTarget(yLimiter.getPosition());
     return CURRENT_STATE;
 }
 
@@ -156,7 +157,7 @@ state state_tp_step_5_lift()
         xLimiter.setTarget(xLimiter.getPosition() - liftX * DIRECTION);
     }
     // [TODO] try different paths for movement
-    if (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget()) {
+    if (yLimiter.getTarget() - yLimiter.getPosition() < liftHeight / 2) {
         return TP_STEP_6_CLOSE_SIDE_CLAMP;
     }
     return CURRENT_STATE;
@@ -172,8 +173,8 @@ state state_tp_step_6_close_side_clamp()
         DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(clampClosedAngle) : rightClamp.setAngleSmoothed(clampClosedAngle);
         centerClamp.setAngleSmoothed(clampOpenAngle);
     }
-    if (millis_since_last_state_update > 200) {
-        return TP_STEP_7a_SWEEP;
+    if (armAtTarget()) {
+        return TP_STEP_7_SWEEP;
     }
     return CURRENT_STATE;
 }
@@ -181,13 +182,28 @@ state state_tp_step_6_close_side_clamp()
 /**
   * @brief  move the sweep servo from one side to the other, wait until target position has been reached
   */
-state state_tp_step_7a_sweep()
+state state_tp_step_7_sweep()
 {
     if (did_state_change) {
+        sweeper.enable();
         sweeper.setAngleSmoothed(DIRECTION * -1);
     }
+    if (abs(sweeper.getPos() - sweeper.getPosTarget()) < sideClampOpenSweeperDist) {
+        DIRECTION == FORWARD ? leftClamp.setAngleSmoothed(clampOpenAngle) : rightClamp.setAngleSmoothed(clampOpenAngle);
+    }
+    if (abs(sweeper.distToTarget()) < centerClampCloseSweeperDist) {
+        centerClamp.setAngleSmoothed(clampClosedAngle);
+
+        return TP_STEP_8_CLAMP;
+    }
+    return CURRENT_STATE;
+}
+
+state state_tp_step_8_clamp()
+{
     if (sweeper.isPosAtTarget()) {
-        return TP_STEP_7b_SWEEP;
+        DIRECTION == FORWARD ? leftClamp.setAngleSmoothed(clampClosedAngle) : rightClamp.setAngleSmoothed(clampClosedAngle);
+        return TP_STEP_9_SWEEPER_RETURN;
     }
     return CURRENT_STATE;
 }
@@ -195,43 +211,17 @@ state state_tp_step_7a_sweep()
 /**
   * @brief  move the sweep servo back to the original position, wait until target position has been reached
   */
-state state_tp_step_7b_sweep()
+state state_tp_step_9_sweeper_return()
 {
     if (did_state_change) {
+        xLimiter.setTarget(0);
+        yLimiter.setTarget(length_arm_1 + length_arm_2);
         sweeper.setAngleSmoothed(DIRECTION);
     }
+
     if (sweeper.isPosAtTarget()) {
-        return TP_STEP_8_OPEN_SIDE_CLAMP;
-    }
-    return CURRENT_STATE;
-}
-
-/**
-  * @brief  open the clamp on the side of the page that has been swept and close the center clamp, wait 1.5 seconds 
-  */
-state state_tp_step_8_open_side_clamp()
-{
-    if (did_state_change) {
-        // open clamp on newly turned page side and close center clamp
-        DIRECTION == BACKWARD ? rightClamp.setAngleSmoothed(clampOpenAngle) : leftClamp.setAngleSmoothed(clampOpenAngle);
-        centerClamp.setAngleSmoothed(clampClosedAngle);
-    }
-    if (millis_since_last_state_update > 1500) {
-        return TP_STEP_9_CLOSE_SIDE_CLAMP;
-    }
-    return CURRENT_STATE;
-}
-
-/**
-  * @brief  close the side clamp, wait .2 seconds
-  */
-state state_tp_step_9_close_side_clamp()
-{
-    if (did_state_change) {
-        DIRECTION == BACKWARD ? rightClamp.setAngleSmoothed(clampClosedAngle) : leftClamp.setAngleSmoothed(clampClosedAngle);
-    }
-    if (millis_since_last_state_update > 200) {
-        return TP_STEP_10_CLEANUP;
+        sweeper.disable();
+        return IDLE;
     }
     return CURRENT_STATE;
 }
@@ -249,12 +239,4 @@ state state_error()
     motor2Controller.disable();
     digitalWrite(BUILTIN_LED, (millis() % 500) < 250);
     return CURRENT_STATE;
-}
-
-/**
-  * @brief  unused state
-  */
-state state_tp_step_10_cleanup()
-{
-    return IDLE;
 }

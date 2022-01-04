@@ -2,7 +2,6 @@
 #define EWDmaxWifiRecvBufSize 100
 
 #include "TwoAxisArmKinematics.h"
-#include "forceController.h"
 #include <Arduino.h>
 #include <Derivs_Limiter.h>
 #include <ESP32_easy_wifi_data.h>
@@ -64,7 +63,7 @@ float y = 0;
 float theta1 = 0;
 float theta2 = 0;
 //arm constants
-const float MIN_Y = 9; // if book not detected while arm going down, continue to next step anyways if y goes below this value
+const float MIN_Y = 8; // if book not detected while arm going down, continue to next step anyways if y goes below this value
 const float length_arm_1 = 14; // in cm
 const float length_arm_2 = 13; // in cm
 const float theta1Min = -55;
@@ -73,9 +72,9 @@ const float theta2Min = -175;
 const float theta2Max = 175;
 #define ARM_SETTINGS length_arm_1, length_arm_2, theta1Min, theta1Max, theta2Min, theta2Max
 
-//raw encoder units
-int encoder1Zero = 10745;
-int encoder2Zero = 8131;
+//raw encoder units (increase makes arms turn CW from front view)
+int encoder1Zero = 10850;
+int encoder2Zero = 8900;
 
 //state machine variables
 unsigned long millis_since_last_state_update = 0;
@@ -83,24 +82,24 @@ unsigned long millis_when_state_changed = 0;
 bool did_state_change = true;
 
 //smooth acceleration for arm position
-Derivs_Limiter xLimiter = Derivs_Limiter(8, 6); //vel, accel
-Derivs_Limiter yLimiter = Derivs_Limiter(8, 6);
+Derivs_Limiter xLimiter = Derivs_Limiter(15, 15); //vel, accel
+Derivs_Limiter yLimiter = Derivs_Limiter(15, 15);
 
-//force controller using pid to maintain constant force when peeling a page
-forceController fc = forceController();
-
-//SETTINGS relevant to the book being used
-float hoverX = 18; // coordinate to move the servo arm (x direction) when beginning turn page routine
-float hoverY = 19.5; // coordinate to move the servo arm (y direction) when beginning turn page routine
-float targetForceY = -.9; // how much force (y direction) is being applied on the book
-float peelDist = 1; //how far to move tape wheel along book
-float peelTime = 2; //how long peel motion should take
-float liftHeight = 15; //how far to lift up after peeling up a single page
-float liftX = 9; //how far to move in after peeling up a single page
+//SETTINGS relevant to the book being used (in cm)
+float hoverX = 16.5; // coordinate to move the servo arm (x direction) when beginning turn page routine
+float hoverY = 20.0; // coordinate to move the servo arm (y direction) when beginning turn page routine
+float targetForceY = -0.80; // how much force (y direction) is being applied on the book
+float peelDist = 2.5; //how far to move tape wheel along book
+float peelTime = 1; //how long peel motion should take
+float liftHeight = 14; //how far to lift up after peeling up a single page
+float liftX = 11; //how far to move in after peeling up a single page
 float downSpeed = 3; // what speed to move arm towards page at
 float DIST_DOWN_BEFORE_TARE = 4; //how far to go down before tareing and enabling sensing (this distance allows the torque measurements to stabilize)
-float clampOpenAngle = 1; // angle to open the 3 clamps at
-float clampClosedAngle = 0; // angle to close the 3 clamps at, also the resting position
+float sideClampOpenSweeperDist = .5;
+float centerClampCloseSweeperDist = .09;
+
+float clampOpenAngle = 1;
+float clampClosedAngle = 0;
 
 //direction to turn the page (BACKWARD makes page move right, FORWARD makes the page move left)
 typedef enum {
@@ -121,11 +120,9 @@ typedef enum {
     TP_STEP_4_PEEL,
     TP_STEP_5_LIFT,
     TP_STEP_6_CLOSE_SIDE_CLAMP,
-    TP_STEP_7a_SWEEP,
-    TP_STEP_7b_SWEEP,
-    TP_STEP_8_OPEN_SIDE_CLAMP,
-    TP_STEP_9_CLOSE_SIDE_CLAMP,
-    TP_STEP_10_CLEANUP,
+    TP_STEP_7_SWEEP,
+    TP_STEP_8_CLAMP,
+    TP_STEP_9_SWEEPER_RETURN,
     ERROR
 } state;
 state PREVIOUS_STATE = START;
@@ -147,6 +144,13 @@ void WifiDataToParse()
     liftHeight = EWD::recvFl();
     liftX = EWD::recvFl();
     downSpeed = EWD::recvFl();
+    // encoder1Zero = EWD::recvIn();
+    // encoder2Zero = EWD::recvIn();
+    // if (go) {
+    //     encoder1.setEncoderZero(encoder1Zero);
+    //     encoder2.setEncoderZero(encoder2Zero);
+    //     go = false;
+    // }
 }
 void WifiDataToSend()
 {
@@ -156,13 +160,15 @@ void WifiDataToSend()
     EWD::sendFl(torque2);
     EWD::sendFl(Fx);
     EWD::sendFl(Fy);
+    EWD::sendFl(xLimiter.getPosition());
+    EWD::sendFl(yLimiter.getPosition());
     EWD::sendIn(CURRENT_STATE);
 }
 
 void setup()
 {
     pinMode(BUILTIN_LED, OUTPUT);
-    digitalWrite(BUILTIN_LED, HIGH);
+    digitalWrite(BUILTIN_LED, LOW);
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     Serial.begin(115200);
     Serial.println("---starting---");
@@ -181,7 +187,7 @@ void setup()
 
     //set up and calibrate servos
     sweeper.setConstrainRange(true);
-    sweeper.setVelAccelLimits(1, 1);
+    sweeper.setVelAccelLimits(2, 2);
     sweeper.setServoRangeValues(530, 2400);
     sweeper.setSetAngles(BACKWARD, FORWARD);
     sweeper.setAngleLimits(FORWARD, BACKWARD);
@@ -192,7 +198,7 @@ void setup()
     leftClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
     leftClamp.setAngleImmediate(clampClosedAngle);
 
-    rightClamp.setServoRangeValues(550, 1600);
+    rightClamp.setServoRangeValues(620, 1600);
     rightClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
     rightClamp.setAngleLimits(clampOpenAngle, clampClosedAngle);
     rightClamp.setAngleImmediate(clampClosedAngle);
@@ -207,8 +213,9 @@ void setup()
 
     Wire.begin();
 
-    EWD::routerName = "Brown-Guest"; //name of the wifi network you want to connect to
-    EWD::routerPass = "-open-network-"; //password for your wifi network (enter "-open-network-" if the network has no password) (default: -open-network-)
+    EWD::routerName = "chicken"; //name of the wifi network you want to connect to
+    EWD::routerPass = "bawkbawk"; //password for your wifi network (enter "-open-network-" if the network has no password) (default: -open-network-)
+    EWD::wifiRestartNotHotspot = false;
     EWD::wifiPort = 25210; //what port the esp32 communicates on if connected to a wifi network (default: 25210)
     EWD::setupWifi(WifiDataToParse, WifiDataToSend);
 
@@ -216,7 +223,7 @@ void setup()
     encoder2.setEncoderZero(encoder2Zero);
 
     yLimiter.setPosition(length_arm_1 + length_arm_2);
-    digitalWrite(BUILTIN_LED, LOW);
+    digitalWrite(BUILTIN_LED, HIGH);
 }
 
 /**
@@ -263,20 +270,14 @@ void run_state()
     case TP_STEP_6_CLOSE_SIDE_CLAMP:
         NEXT_STATE = state_tp_step_6_close_side_clamp();
         break;
-    case TP_STEP_7a_SWEEP:
-        NEXT_STATE = state_tp_step_7a_sweep();
+    case TP_STEP_7_SWEEP:
+        NEXT_STATE = state_tp_step_7_sweep();
         break;
-    case TP_STEP_7b_SWEEP:
-        NEXT_STATE = state_tp_step_7b_sweep();
+    case TP_STEP_8_CLAMP:
+        NEXT_STATE = state_tp_step_8_clamp();
         break;
-    case TP_STEP_8_OPEN_SIDE_CLAMP:
-        NEXT_STATE = state_tp_step_8_open_side_clamp();
-        break;
-    case TP_STEP_9_CLOSE_SIDE_CLAMP:
-        NEXT_STATE = state_tp_step_9_close_side_clamp();
-        break;
-    case TP_STEP_10_CLEANUP:
-        NEXT_STATE = state_tp_step_10_cleanup();
+    case TP_STEP_9_SWEEPER_RETURN:
+        NEXT_STATE = state_tp_step_9_sweeper_return();
         break;
     case ERROR:
         NEXT_STATE = state_error();
