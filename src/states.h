@@ -6,10 +6,27 @@
  * millis_since_last_state_update: (unsigned long) how many milliseconds has the current state been running for. 0 if state just changed
  */
 #include <Arduino.h>
-
 bool armAtTarget()
 {
     return (xLimiter.isPosAtTarget() && yLimiter.isPosAtTarget() && motor1Controller.posSetpointSmoother.isPosAtTarget() && motor2Controller.posSetpointSmoother.isPosAtTarget());
+}
+/**
+ * @brief  set clamp position of the clamp on the side where the page to turn starts
+ * @param  pos: (use clampAngleOpen or clampAngleClosed)
+ * @retval None
+ */
+void setFirstClamp(float pos)
+{
+    DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(pos) : rightClamp.setAngleSmoothed(pos);
+}
+/**
+ * @brief  set clamp position of the clamp on the side where the page to turn ends
+ * @param  pos: (use clampAngleOpen or clampAngleClosed)
+ * @retval None
+ */
+void setSecondClamp(float pos)
+{
+    DIRECTION == FORWARD ? leftClamp.setAngleSmoothed(pos) : rightClamp.setAngleSmoothed(pos);
 }
 
 void tareTorques()
@@ -23,7 +40,7 @@ void tareTorques()
   */
 state state_idle()
 {
-    if (enabled) {
+    if (enabled) { //for debug
         xLimiter.setTarget(xTarg);
         yLimiter.setTarget(yTarg);
     } else {
@@ -41,7 +58,13 @@ state state_idle()
     centerClamp.disable();
     sweeper.disable();
 
-    if (go || digitalRead(BUTTON_PIN) == LOW) { //for debug, wait for 'g' keypress from computer
+    if (go) {
+        DIRECTION = BACKWARD;
+        return TP_SETUP;
+    }
+
+    if (digitalRead(BUTTON_PIN) == LOW) {
+        DIRECTION = FORWARD;
         return TP_SETUP;
     }
     return CURRENT_STATE;
@@ -58,9 +81,6 @@ state state_tp_setup()
     rightClamp.enable();
     centerClamp.enable();
     sweeper.enable();
-    // reset variables (if any)
-    // DETERMINE WHICH DIRECTION TO GO IN
-    DIRECTION = FORWARD;
     sweeper.setAngleSmoothed(DIRECTION);
     if (sweeper.isPosAtTarget()) {
         sweeper.disable();
@@ -122,7 +142,7 @@ state state_tp_step_3_open_side_clamp()
 {
     if (did_state_change) {
         // open the clamp on the side of the page that's being turned
-        DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(clampOpenAngle) : rightClamp.setAngleSmoothed(clampOpenAngle);
+        setFirstClamp(clampOpenAngle);
     }
     if (millis_since_last_state_update > 200) {
         return TP_STEP_4_PEEL;
@@ -154,10 +174,10 @@ state state_tp_step_5_lift()
 {
     if (did_state_change) {
         yLimiter.setTarget(yLimiter.getPosition() + liftHeight);
-        xLimiter.setTarget(xLimiter.getPosition() - liftX * DIRECTION);
+        xLimiter.setTarget(0.001 * DIRECTION); //basically zero, but make the arm fold the right way
     }
     // [TODO] try different paths for movement
-    if (yLimiter.getTarget() - yLimiter.getPosition() < liftHeight / 2) {
+    if (yLimiter.getTarget() - yLimiter.getPosition() < liftHeight * (1 - center_open_height)) {
         return TP_STEP_6_CLOSE_SIDE_CLAMP;
     }
     return CURRENT_STATE;
@@ -170,7 +190,9 @@ state state_tp_step_6_close_side_clamp()
 {
     if (did_state_change) {
         // close side clamp and open center clamp
-        DIRECTION == BACKWARD ? leftClamp.setAngleSmoothed(clampClosedAngle) : rightClamp.setAngleSmoothed(clampClosedAngle);
+        setFirstClamp(clampClosedAngle);
+    }
+    if (millis_since_last_state_update > 100) {
         centerClamp.setAngleSmoothed(clampOpenAngle);
     }
     if (armAtTarget()) {
@@ -188,8 +210,8 @@ state state_tp_step_7_sweep()
         sweeper.enable();
         sweeper.setAngleSmoothed(DIRECTION * -1);
     }
-    if (abs(sweeper.getPos() - sweeper.getPosTarget()) < sideClampOpenSweeperDist) {
-        DIRECTION == FORWARD ? leftClamp.setAngleSmoothed(clampOpenAngle) : rightClamp.setAngleSmoothed(clampOpenAngle);
+    if (abs(sweeper.distToTarget()) < sideClampOpenSweeperDist) {
+        setSecondClamp(clampOpenAngle);
     }
     if (abs(sweeper.distToTarget()) < centerClampCloseSweeperDist) {
         centerClamp.setAngleSmoothed(clampClosedAngle);
@@ -202,7 +224,7 @@ state state_tp_step_7_sweep()
 state state_tp_step_8_clamp()
 {
     if (sweeper.isPosAtTarget()) {
-        DIRECTION == FORWARD ? leftClamp.setAngleSmoothed(clampClosedAngle) : rightClamp.setAngleSmoothed(clampClosedAngle);
+        setSecondClamp(clampClosedAngle);
         return TP_STEP_9_SWEEPER_RETURN;
     }
     return CURRENT_STATE;

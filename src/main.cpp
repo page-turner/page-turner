@@ -86,18 +86,18 @@ Derivs_Limiter xLimiter = Derivs_Limiter(15, 15); //vel, accel
 Derivs_Limiter yLimiter = Derivs_Limiter(15, 15);
 
 //SETTINGS relevant to the book being used (in cm)
-float hoverX = 16.5; // coordinate to move the servo arm (x direction) when beginning turn page routine
+float hoverX = 12.5; // coordinate to move the servo arm (x direction) when beginning turn page routine
 float hoverY = 20.0; // coordinate to move the servo arm (y direction) when beginning turn page routine
-float targetForceY = -0.80; // how much force (y direction) is being applied on the book
-float peelDist = 2.5; //how far to move tape wheel along book
+float targetForceY = -0.90; // how much force (y direction) is being applied on the book
+float peelDist = 2.0; //how far to move tape wheel along book
 float peelTime = 1; //how long peel motion should take
-float liftHeight = 14; //how far to lift up after peeling up a single page
-float liftX = 11; //how far to move in after peeling up a single page
+float liftHeight = 11; //how far to lift up after peeling up a single page
 float downSpeed = 3; // what speed to move arm towards page at
-float DIST_DOWN_BEFORE_TARE = 4; //how far to go down before tareing and enabling sensing (this distance allows the torque measurements to stabilize)
-float sideClampOpenSweeperDist = .5;
-float centerClampCloseSweeperDist = .09;
 
+float DIST_DOWN_BEFORE_TARE = 4; //how far to go down before tareing and enabling sensing (this distance allows the torque measurements to stabilize)
+float sideClampOpenSweeperDist = .6;
+float centerClampCloseSweeperDist = .4;
+float center_open_height = .3; //when lifting
 float clampOpenAngle = 1;
 float clampClosedAngle = 0;
 
@@ -142,7 +142,7 @@ void WifiDataToParse()
     peelDist = EWD::recvFl();
     peelTime = EWD::recvFl();
     liftHeight = EWD::recvFl();
-    liftX = EWD::recvFl();
+    // liftX = EWD::recvFl();
     downSpeed = EWD::recvFl();
     // encoder1Zero = EWD::recvIn();
     // encoder2Zero = EWD::recvIn();
@@ -191,7 +191,7 @@ void setup()
     sweeper.setServoRangeValues(530, 2400);
     sweeper.setSetAngles(BACKWARD, FORWARD);
     sweeper.setAngleLimits(FORWARD, BACKWARD);
-    sweeper.setAngleImmediate(FORWARD);
+    sweeper.setAngleImmediate(0);
 
     leftClamp.setServoRangeValues(550, 1600);
     leftClamp.setSetAngles(clampClosedAngle, clampOpenAngle);
@@ -213,8 +213,8 @@ void setup()
 
     Wire.begin();
 
-    EWD::routerName = "chicken"; //name of the wifi network you want to connect to
-    EWD::routerPass = "bawkbawk"; //password for your wifi network (enter "-open-network-" if the network has no password) (default: -open-network-)
+    EWD::routerName = "Garage2.4"; //name of the wifi network you want to connect to
+    EWD::routerPass = "TamiBeach"; //password for your wifi network (enter "-open-network-" if the network has no password) (default: -open-network-)
     EWD::wifiRestartNotHotspot = false;
     EWD::wifiPort = 25210; //what port the esp32 communicates on if connected to a wifi network (default: 25210)
     EWD::setupWifi(WifiDataToParse, WifiDataToSend);
