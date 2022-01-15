@@ -213,8 +213,8 @@ void setup()
 
     Wire.begin();
 
-    EWD::routerName = "Garage2.4"; //name of the wifi network you want to connect to
-    EWD::routerPass = "TamiBeach"; //password for your wifi network (enter "-open-network-" if the network has no password) (default: -open-network-)
+    EWD::routerName = "chicken"; //name of the wifi network you want to connect to
+    EWD::routerPass = "bawkbawk"; //password for your wifi network (enter "-open-network-" if the network has no password) (default: -open-network-)
     EWD::wifiRestartNotHotspot = false;
     EWD::wifiPort = 25210; //what port the esp32 communicates on if connected to a wifi network (default: 25210)
     EWD::setupWifi(WifiDataToParse, WifiDataToSend);
