@@ -74,7 +74,7 @@ const float theta2Max = 175;
 
 //raw encoder units (increase makes arms turn CW from front view)
 int encoder1Zero = 10850;
-int encoder2Zero = 8900;
+int encoder2Zero = 8300;
 
 //state machine variables
 unsigned long millis_since_last_state_update = 0;
